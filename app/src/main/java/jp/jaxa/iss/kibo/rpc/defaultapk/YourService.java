@@ -27,9 +27,6 @@ import jp.jaxa.iss.kibo.rpc.defaultapk.untils.PointWithQuaternion;
 
 
 import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
-/**
- * Class meant to handle commands from the Ground Data System and execute them in Astrobee
- */
 
 public class YourService extends KiboRpcService {
 
