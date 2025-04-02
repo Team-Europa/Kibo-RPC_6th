@@ -1,4 +1,4 @@
-package jp.jaxa.iss.kibo.rpc.defaultapk.untils;
+package jp.jaxa.iss.kibo.rpc.defaultapk.utils;
 
 import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
