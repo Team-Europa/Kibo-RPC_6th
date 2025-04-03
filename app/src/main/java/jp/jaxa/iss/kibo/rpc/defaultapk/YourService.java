@@ -1,6 +1,7 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk;
 
 import android.os.SystemClock;
+import android.util.Log;
 
 import org.opencv.aruco.Aruco;
 import org.opencv.calib3d.Calib3d;
@@ -43,6 +44,7 @@ public class YourService extends KiboRpcService {
         visionThread.start();
         moveToWithRetry(point1,10);
         moveToWithRetry(point2,10);
+        SystemClock.sleep(10000);
         moveToWithRetry(point3,10);
         moveToWithRetry(astronautPQ,10);
         visionThread.interrupt();
@@ -74,7 +76,7 @@ public class YourService extends KiboRpcService {
                 Mat navImgNow = api.getMatNavCam();
                 Mat dockImgNow = api.getMatDockCam();
 
-                Kinematics robotNowKinematics = api.getRobotKinematics();
+                final Kinematics robotNowKinematics = api.getRobotKinematics();
                 Long pastTime = System.currentTimeMillis();
 
                 if (!areImgEqual(navImgPast, navImgNow)) {
@@ -86,7 +88,7 @@ public class YourService extends KiboRpcService {
                     executorService.submit(new Runnable() {
                         @Override
                         public void run() {
-                            scanItemFromMat(calibNavImg, navCamIntrinsicsMatrix[0]);
+                            scanItemFromMat(calibNavImg, navCamIntrinsicsMatrix[0], robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
                         }
                     });
                 }
@@ -100,7 +102,7 @@ public class YourService extends KiboRpcService {
                     executorService.submit(new Runnable() {
                         @Override
                         public void run() {
-                            scanItemFromMat(calibDockImg, navCamIntrinsicsMatrix[0]);
+                            scanItemFromMat(calibDockImg, navCamIntrinsicsMatrix[0], robotNowKinematics.getPosition(), QuaternionConjugate(robotNowKinematics.getOrientation()));
                         }
                     });
                 }
@@ -180,7 +182,7 @@ public class YourService extends KiboRpcService {
         return hash;
     }
 
-    private void scanItemFromMat(Mat img, double[] camDoubleMatrix){
+    private void scanItemFromMat(Mat img, double[] camDoubleMatrix,Point point, Quaternion camQuaternion){
         Mat cameraMatrix = new Mat(3, 3 , CvType.CV_64F);//setup cameraMatrix for calibratedImg
         cameraMatrix.put(0,0, camDoubleMatrix[0]);
         cameraMatrix.put(0,1, 0);
@@ -215,6 +217,16 @@ public class YourService extends KiboRpcService {
 
                 Mat lostItemBoardImg = getWarpItemImg(img, rvec, tvec, cameraMatrix, doubleDistCoeffs);
 
+                double[] tvecArray = tvec.get(0, 0);
+                double tx = tvecArray[0];
+                double ty = tvecArray[1];
+                double tz = tvecArray[2];
+                Point arucoWorldPos = getAbsolutePointByPQ(tx-0.0422, ty+0.0826, tz+0.1177, point, camQuaternion);
+
+                Log.i("arucoWorldPos",id + ":  "+ arucoWorldPos);
+                Log.i("robotPos",point + "//"+ camQuaternion);
+                Log.i("arucoRelativePos",id + ":  "+ tvecArray[0] + ","+ tvecArray[1] + ","+ tvecArray[2] + ",");
+
                 if(lostItemBoardImg != null){
                     api.saveMatImage(lostItemBoardImg,"image_" + saveImgNum + ".png");
                     saveImgNum++;
@@ -223,7 +235,7 @@ public class YourService extends KiboRpcService {
         }
     }
 
-    public Mat getWarpItemImg(Mat originImg, Mat rvec, Mat tvec, Mat cameraMatrix, MatOfDouble doubleDistCoeffs){
+    private Mat getWarpItemImg(Mat originImg, Mat rvec, Mat tvec, Mat cameraMatrix, MatOfDouble doubleDistCoeffs){
 
         MatOfPoint3f itemBoardWorldPoint = new MatOfPoint3f(
                 new Point3(-0.2325, 0.0375, 0),
@@ -272,11 +284,40 @@ public class YourService extends KiboRpcService {
         return result.hasSucceeded();
     }
 
-    public static double calculateAngle(Quaternion q1, Quaternion q2) {
+    private static double calculateAngle(Quaternion q1, Quaternion q2) {
         double dotProduct = q1.getW() * q2.getW() + q1.getX() * q2.getX() + q1.getY() * q2.getY() + q1.getZ() * q2.getZ();
         double q1Magnitude = Math.sqrt(q1.getW() * q1.getW() + q1.getX() * q1.getX() + q1.getY() * q1.getY() + q1.getZ() * q1.getZ());
         double q2Magnitude = Math.sqrt(q2.getW() * q2.getW() + q2.getX() * q2.getX() + q2.getY() * q2.getY() + q2.getZ() * q2.getZ());
         return Math.acos(dotProduct / (q1Magnitude * q2Magnitude));
+    }
+
+    private static double[][] quaternionToRotationMatrix(Quaternion q) {
+        double w = q.getW(), x = q.getX(), y = q.getY(), z = q.getZ();
+        return new double[][] {
+                {1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)},
+                {2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)},
+                {2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)}
+        };
+    }
+
+    private static Point getAbsolutePointByPQ(Double tx, Double ty, Double tz, Point localOrigin, Quaternion orientation) {
+        // Rotation matrix converting
+        double[][] R = quaternionToRotationMatrix(orientation);
+        // Rotating and transforming
+        double[] localOriginMatrix = {localOrigin.getX(), localOrigin.getY(), localOrigin.getZ()};
+        double[] localPositionMatrix = {tx, ty, tz};
+        double[] globalPosition = new double[3];
+        for (int i = 0; i < 3; i++) {
+            globalPosition[i] = localOriginMatrix[i];
+            for (int j = 0; j < 3; j++) {
+                globalPosition[i] += R[i][j] * localPositionMatrix[j];
+            }
+        }
+        return new Point(globalPosition[0], globalPosition[1], globalPosition[2]);
+    }
+
+    private Quaternion QuaternionConjugate(Quaternion quaternion) {
+        return new Quaternion(quaternion.getW(), -quaternion.getX(), -quaternion.getY(), -quaternion.getZ());
     }
 }
 
