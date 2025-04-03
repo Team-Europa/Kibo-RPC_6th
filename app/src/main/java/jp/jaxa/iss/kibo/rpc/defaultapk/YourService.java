@@ -24,7 +24,7 @@ import gov.nasa.arc.astrobee.Result;
 import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
-import jp.jaxa.iss.kibo.rpc.defaultapk.untils.PointWithQuaternion;
+import jp.jaxa.iss.kibo.rpc.defaultapk.utils.PointWithQuaternion;
 
 
 import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
