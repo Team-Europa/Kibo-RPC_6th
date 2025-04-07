@@ -24,22 +24,22 @@ import gov.nasa.arc.astrobee.Result;
 import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
+import jp.jaxa.iss.kibo.rpc.defaultapk.utils.CamParameter;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.PointWithQuaternion;
 
 
 import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
 
 public class YourService extends KiboRpcService {
+    private CamParameter navCamParameter = new CamParameter();
+    private CamParameter dockCamParameter = new CamParameter();
 
-    private double[][]  navCamIntrinsicsMatrix;
-    private double[][] dockCamIntrinsicsMatrix;
-
-    private int saveImgNum= 0;
+    private int saveImgNum = 0;
 
     @Override
     protected void runPlan1(){
         api.startMission();
-        initCalibMatrix();
+        initCamParameter();
         Thread visionThread = new Thread(new Vision());
         visionThread.start();
         moveToWithRetry(point1,10);
@@ -49,6 +49,8 @@ public class YourService extends KiboRpcService {
         moveToWithRetry(astronautPQ,10);
         visionThread.interrupt();
         SystemClock.sleep(3000);
+        api.setAreaInfo(1,"compass",1);
+        api.reportRoundingCompletion();
         api.notifyRecognitionItem();
         api.takeTargetItemSnapshot();
     }
@@ -77,18 +79,18 @@ public class YourService extends KiboRpcService {
                 Mat dockImgNow = api.getMatDockCam();
 
                 final Kinematics robotNowKinematics = api.getRobotKinematics();
-                Long pastTime = System.currentTimeMillis();
+                long pastTime = System.currentTimeMillis();
 
                 if (!areImgEqual(navImgPast, navImgNow)) {
                     PointWithQuaternion navImgShotPQ = new PointWithQuaternion(robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
                     navImgPast = navImgNow;
 
-                    final Mat calibNavImg = calibImgWithMatrix(navImgNow, navCamIntrinsicsMatrix);
+                    final Mat calibNavImg = calibCamImg(navImgNow, navCamParameter);
 
                     executorService.submit(new Runnable() {
                         @Override
                         public void run() {
-                            scanItemFromMat(calibNavImg, navCamIntrinsicsMatrix[0], robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
+                            scanItemFromMat(calibNavImg, navCamParameter, robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
                         }
                     });
                 }
@@ -97,20 +99,19 @@ public class YourService extends KiboRpcService {
                     PointWithQuaternion dockImgShotPQ = new PointWithQuaternion(robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
                     dockImgPast = dockImgNow;
 
-                    final Mat calibDockImg = calibImgWithMatrix(dockImgNow, dockCamIntrinsicsMatrix);
+                    final Mat calibDockImg = calibCamImg(dockImgNow, dockCamParameter);
 
                     executorService.submit(new Runnable() {
                         @Override
                         public void run() {
-                            scanItemFromMat(calibDockImg, navCamIntrinsicsMatrix[0], robotNowKinematics.getPosition(), QuaternionConjugate(robotNowKinematics.getOrientation()));
+                            scanItemFromMat(calibDockImg, dockCamParameter, robotNowKinematics.getPosition(), quaternionConjugate(robotNowKinematics.getOrientation()));
                         }
                     });
                 }
 
                 try {
                     long processingTime = System.currentTimeMillis() - pastTime;
-                    long sleepTime = Math.max(100, 300 - processingTime);
-                    Thread.sleep(sleepTime);
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -122,39 +123,15 @@ public class YourService extends KiboRpcService {
 
     }
 
-    private void initCalibMatrix(){
-        navCamIntrinsicsMatrix = api.getNavCamIntrinsics();
-        dockCamIntrinsicsMatrix = api.getDockCamIntrinsics();
+    private void initCamParameter() {
+        navCamParameter.initCamParameter(api.getNavCamIntrinsics(), navCamDistFromCenter);
+        dockCamParameter.initCamParameter(api.getDockCamIntrinsics(), dockCamDistFromCenter);
     }
 
-    private Mat calibImgWithMatrix(Mat originalImg, double[][] calibMatrix) {
-        Mat CameraMatrix = new Mat(3, 3 , CvType.CV_64F);
-        Mat DistortionCoefficients = new Mat(1 , 5 , CvType.CV_64F);
-        setCamCalib(calibMatrix[0], calibMatrix[1], CameraMatrix, DistortionCoefficients);
-
+    private Mat calibCamImg(Mat originalImg, CamParameter camParameter) {
         Mat calibrateImaged = new Mat();
-
-        Calib3d.undistort(
-                originalImg,
-                calibrateImaged,
-                CameraMatrix,
-                DistortionCoefficients
-        );
+        Calib3d.undistort(originalImg, calibrateImaged, camParameter.camMatrix, camParameter.camDistCoeffs);
         return calibrateImaged;
-    }
-
-    private void setCamCalib(double[] cameraDoubleMatrix, double[] distortionCoefficientsDoubleMatrix, Mat cameraMatrix, Mat distortionCoefficients) {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                cameraMatrix.put(i, j, cameraDoubleMatrix[i * 3 + j]);
-            }
-        }
-
-        for (int i = 0; i < 1; i++) {
-            for (int j = 0; j < 5; j++) {
-                distortionCoefficients.put(i, j, distortionCoefficientsDoubleMatrix[j]);
-            }
-        }
     }
 
     public static boolean areImgEqual(Mat image1, Mat image2) {
@@ -182,14 +159,14 @@ public class YourService extends KiboRpcService {
         return hash;
     }
 
-    private void scanItemFromMat(Mat img, double[] camDoubleMatrix,Point point, Quaternion camQuaternion){
+    private void scanItemFromMat(Mat img, CamParameter camParameter,Point point, Quaternion camQuaternion){
         Mat cameraMatrix = new Mat(3, 3 , CvType.CV_64F);//setup cameraMatrix for calibratedImg
-        cameraMatrix.put(0,0, camDoubleMatrix[0]);
+        cameraMatrix.put(0,0, camParameter.camIntrinsicsMatrix[0][0]);
         cameraMatrix.put(0,1, 0);
-        cameraMatrix.put(0,2, camDoubleMatrix[2]);
+        cameraMatrix.put(0,2, camParameter.camIntrinsicsMatrix[0][2]);
         cameraMatrix.put(1,0, 0);
-        cameraMatrix.put(1,1, camDoubleMatrix[4]);
-        cameraMatrix.put(1,2, camDoubleMatrix[5]);
+        cameraMatrix.put(1,1, camParameter.camIntrinsicsMatrix[0][4]);
+        cameraMatrix.put(1,2, camParameter.camIntrinsicsMatrix[0][5]);
         cameraMatrix.put(2,0, 0);
         cameraMatrix.put(2,1, 0);
         cameraMatrix.put(2,2, 1);
@@ -205,6 +182,7 @@ public class YourService extends KiboRpcService {
         Aruco.detectMarkers(img, Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250), arucoCorners, arucoIDs);
 
         if(!arucoIDs.empty()) {
+            Log.i("arucoIDs",arucoIDs.toString());
             Mat rvecs = new Mat();
             Mat tvecs = new Mat();
             Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, cameraMatrix, distCoeffs, rvecs, tvecs);
@@ -221,7 +199,7 @@ public class YourService extends KiboRpcService {
                 double tx = tvecArray[0];
                 double ty = tvecArray[1];
                 double tz = tvecArray[2];
-                Point arucoWorldPos = getAbsolutePointByPQ(tx-0.0422, ty+0.0826, tz+0.1177, point, camQuaternion);
+                Point arucoWorldPos = getAbsolutePointByPQ(tx + camParameter.tx, ty + camParameter.ty, tz + camParameter.tz, point, camQuaternion);
 
                 Log.i("arucoWorldPos",id + ":  "+ arucoWorldPos);
                 Log.i("robotPos",point + "//"+ camQuaternion);
@@ -305,7 +283,7 @@ public class YourService extends KiboRpcService {
         double[][] R = quaternionToRotationMatrix(orientation);
         // Rotating and transforming
         double[] localOriginMatrix = {localOrigin.getX(), localOrigin.getY(), localOrigin.getZ()};
-        double[] localPositionMatrix = {tx, ty, tz};
+        double[] localPositionMatrix = {tx, -ty, tz};
         double[] globalPosition = new double[3];
         for (int i = 0; i < 3; i++) {
             globalPosition[i] = localOriginMatrix[i];
@@ -316,7 +294,7 @@ public class YourService extends KiboRpcService {
         return new Point(globalPosition[0], globalPosition[1], globalPosition[2]);
     }
 
-    private Quaternion QuaternionConjugate(Quaternion quaternion) {
+    private static Quaternion quaternionConjugate(Quaternion quaternion) {
         return new Quaternion(quaternion.getW(), -quaternion.getX(), -quaternion.getY(), -quaternion.getZ());
     }
 }
