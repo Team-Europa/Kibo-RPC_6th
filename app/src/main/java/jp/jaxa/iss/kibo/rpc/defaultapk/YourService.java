@@ -42,10 +42,12 @@ public class YourService extends KiboRpcService {
         initCamParameter();
         Thread visionThread = new Thread(new Vision());
         visionThread.start();
-        moveToWithRetry(point1,10);
-        moveToWithRetry(point2,10);
-        SystemClock.sleep(10000);
-        moveToWithRetry(point3,10);
+        moveToWithRetry(point1_1,1);
+        moveToWithRetry(point1_2,1);
+        moveToWithRetry(point2,1);
+        moveToWithRetry(point3,1);
+        moveToWithRetry(point4_1,1);
+        moveToWithRetry(point4_2,1);
         moveToWithRetry(astronautPQ,10);
         visionThread.interrupt();
         SystemClock.sleep(3000);
