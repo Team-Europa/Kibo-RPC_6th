@@ -234,7 +234,7 @@ public class YourService extends KiboRpcService {
             }
         }
 
-        int cmpp = 30;
+        int cmpp = 32;
         Mat frontView = new Mat(15 * cmpp, 20 * cmpp, CvType.CV_8UC3);
 
         MatOfPoint2f dstPoints = new MatOfPoint2f(
