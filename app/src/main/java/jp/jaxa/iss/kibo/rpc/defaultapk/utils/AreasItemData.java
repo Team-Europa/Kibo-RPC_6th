@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 public class AreasItemData {
-    private Map<Integer, List<Pair<String, Integer>>> areaVisionDataMap = new HashMap<>();;
+    private Map<Integer, List<Pair<String, Integer>>> areaVisionDataMap = new HashMap<>();
 
     public void putVisionData(Integer areaNum, Pair<String, Integer> visionData) {
         List<Pair<String, Integer>> list = areaVisionDataMap.get(areaNum);

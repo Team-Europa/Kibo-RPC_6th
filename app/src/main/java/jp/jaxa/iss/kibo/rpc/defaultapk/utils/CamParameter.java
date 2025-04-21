@@ -7,8 +7,8 @@ import org.opencv.core.Scalar;
 
 
 public class CamParameter {
-    public Mat camMatrix;
-    public Mat camDistCoeffs;
+    Mat camMatrix;
+    Mat camDistCoeffs;
     private double[][] camIntrinsicsMatrix;
     public double tx;
     public double ty;
@@ -25,12 +25,10 @@ public class CamParameter {
 
         camMatrix = new Mat(3, 3 , CvType.CV_64F);
         camDistCoeffs = new Mat(1 , 5 , CvType.CV_64F);
-        Mat zeroDistCoeffs = new Mat(1 , 5 , CvType.CV_64F);//setup distCoeffs for calibratedImg
-        zeroDistCoeffs.setTo(new Scalar(0.0));
-        zeroDoubleDistCoeffs = new MatOfDouble(0.0, 0.0, 0.0, 0.0, 0.0);
 
         setCamCalib(camIntrinsicsMatrix[0], camIntrinsicsMatrix[1], camMatrix, camDistCoeffs);
         setArUcoCalibCamMatrix();
+        setZeroDistCoeffs();
     }
 
     private void setCamCalib(double[] cameraDoubleMatrix, double[] distortionCoefficientsDoubleMatrix, Mat cameraMatrix, Mat distortionCoefficients) {
@@ -48,15 +46,21 @@ public class CamParameter {
     }
 
     private void setArUcoCalibCamMatrix() {
-        Mat cameraMatrix = new Mat(3, 3 , CvType.CV_64F);//setup cameraMatrix for calibratedImg
-        cameraMatrix.put(0,0, camIntrinsicsMatrix[0][0]);
-        cameraMatrix.put(0,1, 0);
-        cameraMatrix.put(0,2, camIntrinsicsMatrix[0][2]);
-        cameraMatrix.put(1,0, 0);
-        cameraMatrix.put(1,1, camIntrinsicsMatrix[0][4]);
-        cameraMatrix.put(1,2, camIntrinsicsMatrix[0][5]);
-        cameraMatrix.put(2,0, 0);
-        cameraMatrix.put(2,1, 0);
-        cameraMatrix.put(2,2, 1);
+        arUcoCalibCamMatrix = new Mat(3, 3 , CvType.CV_64F);//setup cameraMatrix for calibratedImg
+        arUcoCalibCamMatrix.put(0,0, camIntrinsicsMatrix[0][0]);
+        arUcoCalibCamMatrix.put(0,1, 0);
+        arUcoCalibCamMatrix.put(0,2, camIntrinsicsMatrix[0][2]);
+        arUcoCalibCamMatrix.put(1,0, 0);
+        arUcoCalibCamMatrix.put(1,1, camIntrinsicsMatrix[0][4]);
+        arUcoCalibCamMatrix.put(1,2, camIntrinsicsMatrix[0][5]);
+        arUcoCalibCamMatrix.put(2,0, 0);
+        arUcoCalibCamMatrix.put(2,1, 0);
+        arUcoCalibCamMatrix.put(2,2, 1);
+    }
+
+    private void setZeroDistCoeffs(){
+        zeroDistCoeffs = new Mat(1 , 5 , CvType.CV_64F);//setup distCoeffs for calibratedImg
+        zeroDistCoeffs.setTo(new Scalar(0.0));
+        zeroDoubleDistCoeffs = new MatOfDouble(0.0, 0.0, 0.0, 0.0, 0.0);
     }
 }
