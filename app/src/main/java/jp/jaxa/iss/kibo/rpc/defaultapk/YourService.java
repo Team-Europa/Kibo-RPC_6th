@@ -11,7 +11,6 @@ import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point3;
-import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
@@ -83,8 +82,7 @@ public class YourService extends KiboRpcService {
                 final Kinematics robotNowKinematics = api.getRobotKinematics();
                 long pastTime = System.currentTimeMillis();
 
-                if (!areImgEqual(navImgPast, navImgNow)) {
-                    PointWithQuaternion navImgShotPQ = new PointWithQuaternion(robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
+                if (areImgDiff(navImgPast, navImgNow)) {
                     navImgPast = navImgNow;
 
                     final Mat calibNavImg = calibCamImg(navImgNow, navCamParameter);
@@ -97,8 +95,7 @@ public class YourService extends KiboRpcService {
                     });
                 }
 
-                if (!areImgEqual(dockImgPast, dockImgNow)) {
-                    PointWithQuaternion dockImgShotPQ = new PointWithQuaternion(robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
+                if (areImgDiff(dockImgPast, dockImgNow)) {
                     dockImgPast = dockImgNow;
 
                     final Mat calibDockImg = calibCamImg(dockImgNow, dockCamParameter);
@@ -136,15 +133,15 @@ public class YourService extends KiboRpcService {
         return calibrateImaged;
     }
 
-    public static boolean areImgEqual(Mat image1, Mat image2) {
+    public static boolean areImgDiff(Mat image1, Mat image2) {
         long hash1 = imageHash(image1);
         long hash2 = imageHash(image2);
 
-        return hash1 == hash2;
+        return hash1 != hash2;
     }
 
     private static long imageHash(Mat image) {
-        long hash = 0;
+        long hash;
         int width = image.cols();
         int height = image.rows();
         int sum = 0;
@@ -162,22 +159,6 @@ public class YourService extends KiboRpcService {
     }
 
     private void scanItemFromMat(Mat img, CamParameter camParameter,Point point, Quaternion camQuaternion){
-        Mat cameraMatrix = new Mat(3, 3 , CvType.CV_64F);//setup cameraMatrix for calibratedImg
-        cameraMatrix.put(0,0, camParameter.camIntrinsicsMatrix[0][0]);
-        cameraMatrix.put(0,1, 0);
-        cameraMatrix.put(0,2, camParameter.camIntrinsicsMatrix[0][2]);
-        cameraMatrix.put(1,0, 0);
-        cameraMatrix.put(1,1, camParameter.camIntrinsicsMatrix[0][4]);
-        cameraMatrix.put(1,2, camParameter.camIntrinsicsMatrix[0][5]);
-        cameraMatrix.put(2,0, 0);
-        cameraMatrix.put(2,1, 0);
-        cameraMatrix.put(2,2, 1);
-
-
-        Mat distCoeffs = new Mat(1 , 5 , CvType.CV_64F);//setup distCoeffs for calibratedImg
-        distCoeffs.setTo(new Scalar(0.0));
-        MatOfDouble doubleDistCoeffs = new MatOfDouble(0.0, 0.0, 0.0, 0.0, 0.0);
-
         List<Mat> arucoCorners = new ArrayList<>();
         Mat arucoIDs = new Mat();
 
@@ -187,7 +168,7 @@ public class YourService extends KiboRpcService {
             Log.i("arucoIDs",arucoIDs.toString());
             Mat rvecs = new Mat();
             Mat tvecs = new Mat();
-            Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, cameraMatrix, distCoeffs, rvecs, tvecs);
+            Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, camParameter.arUcoCalibCamMatrix, camParameter.zeroDistCoeffs, rvecs, tvecs);
 
             for (int i = 0; i < arucoIDs.rows(); i++) {
                 int id = (int) arucoIDs.get(i, 0)[0]-100;
@@ -195,7 +176,7 @@ public class YourService extends KiboRpcService {
                 Mat rvec = rvecs.row(i);
                 Mat tvec = tvecs.row(i);
 
-                Mat lostItemBoardImg = getWarpItemImg(img, rvec, tvec, cameraMatrix, doubleDistCoeffs);
+                Mat lostItemBoardImg = getWarpItemImg(img, rvec, tvec, camParameter.arUcoCalibCamMatrix, camParameter.zeroDoubleDistCoeffs);
 
                 double[] tvecArray = tvec.get(0, 0);
                 double tx = tvecArray[0];
