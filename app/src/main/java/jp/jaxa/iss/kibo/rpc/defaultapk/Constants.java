@@ -2,7 +2,7 @@ package jp.jaxa.iss.kibo.rpc.defaultapk;
 
 import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
-import jp.jaxa.iss.kibo.rpc.defaultapk.utils.PointWithQuaternion;
+import jp.jaxa.iss.kibo.rpc.defaultapk.model.PointWithQuaternion;
 
 class Constants {
     static final PointWithQuaternion astronautPQ =

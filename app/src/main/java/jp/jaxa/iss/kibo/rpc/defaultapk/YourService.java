@@ -17,9 +17,11 @@ import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.CamParameter;
+import jp.jaxa.iss.kibo.rpc.defaultapk.model.DetectionResult;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ImageProcessUtils;
-import jp.jaxa.iss.kibo.rpc.defaultapk.utils.PointWithQuaternion;
+import jp.jaxa.iss.kibo.rpc.defaultapk.model.PointWithQuaternion;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils;
+import jp.jaxa.iss.kibo.rpc.defaultapk.model.SegDetectionResult;
 
 
 import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
@@ -27,6 +29,7 @@ import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
 public class YourService extends KiboRpcService {
     private CamParameter navCamParameter = new CamParameter();
     private CamParameter dockCamParameter = new CamParameter();
+    YOLOv8Ncnn yoloV8Ncnn = new YOLOv8Ncnn();
 
     private int saveImgNum = 0;
 
@@ -62,7 +65,6 @@ public class YourService extends KiboRpcService {
     }
 
     class Vision implements Runnable {
-
         private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
         @Override
@@ -154,6 +156,38 @@ public class YourService extends KiboRpcService {
                 if(lostItemBoardImg != null){
                     api.saveMatImage(lostItemBoardImg,"image_" + saveImgNum + ".png");
                     saveImgNum++;
+
+                    Mat clonedImg = lostItemBoardImg.clone();
+                    yoloV8Ncnn.loadModel(getAssets(), 0, 1, 0);
+                    DetectionResult[] results = yoloV8Ncnn.detectObjects(clonedImg);
+
+                    if (results != null && results.length > 0) {
+                        for (DetectionResult result : results) {
+                            Log.i("YOLOv8", "Label: " + result.label + ", Prob: " + result.prob +
+                                    ", Rect: (" + result.x + "," + result.y + "," + result.width + "," + result.height + ")");
+                        }
+                    } else {
+                        Log.w("YOLOv8", "No objects detected");
+                    }
+
+
+                    yoloV8Ncnn.loadModel(getAssets(), 2, 1, 0);
+                    SegDetectionResult[] results_seg = yoloV8Ncnn.detectSegObjects(clonedImg);
+
+                    if (results != null && results.length > 0) {
+                        Log.i("Detection", "Found " + results.length + " objects");
+                        for (int j = 0; j < results.length; j++) {
+                            SegDetectionResult r = results_seg[j];
+                            Log.i("Object-" + j, String.format(
+                                    "Label:%d Prob:%.2f Box:[%d,%d,%d,%d] MaskBytes:%d",
+                                    r.label, r.prob, r.x, r.y, r.width, r.height, r.mask.length
+                            ));
+                        }
+                    } else {
+                        Log.i("Detection", "No objects detected");
+                    }
+
+                    clonedImg.release();
                 }else{Log.i("lostItemBoardImg","lostItemBoardImg is null");}
             }
         }
