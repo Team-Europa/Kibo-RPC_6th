@@ -207,11 +207,6 @@ Java_jp_jaxa_iss_kibo_rpc_defaultapk_YOLOv8Ncnn_detectObjects(JNIEnv* env, jobje
 
 JNIEXPORT jobjectArray JNICALL
 Java_jp_jaxa_iss_kibo_rpc_defaultapk_YOLOv8Ncnn_detectSegObjects(JNIEnv* env, jobject thiz, jobject matObj) {
-    jclass matClass = env->GetObjectClass(matObj);
-    jmethodID getNativeObjAddr = env->GetMethodID(matClass, "getNativeObjAddr", "()J");
-    jlong matAddr = env->CallLongMethod(matObj, getNativeObjAddr);
-    env->DeleteLocalRef(matClass);
-
     cv::Mat input;
     {
         jclass matClass = env->GetObjectClass(matObj);
