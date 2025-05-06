@@ -1,10 +1,13 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk;
 
+import android.graphics.Bitmap;
 import android.os.SystemClock;
 import android.util.Log;
 
+import org.opencv.android.Utils;
 import org.opencv.aruco.Aruco;
 import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -124,6 +127,10 @@ public class YourService extends KiboRpcService {
         dockCamParameter.initCamParameter(api.getDockCamIntrinsics(), dockCamDistFromCenter);
     }
 
+    private void scanItemFromBitmap (Bitmap img, CamParameter camParameter, Point point, Quaternion camQuaternion){
+
+    }
+
     private void scanItemFromMat(Mat img, CamParameter camParameter,Point point, Quaternion camQuaternion){
         List<Mat> arucoCorners = new ArrayList<>();
         Mat arucoIDs = new Mat();
@@ -158,8 +165,11 @@ public class YourService extends KiboRpcService {
                     saveImgNum++;
 
                     Mat clonedImg = lostItemBoardImg.clone();
+                    Imgproc.cvtColor(clonedImg, clonedImg, Imgproc.COLOR_GRAY2RGBA);
+                    Bitmap clonedImgBitmap = Bitmap.createBitmap(clonedImg.width(), clonedImg.height(), Bitmap.Config.ARGB_8888);
+                    Utils.matToBitmap(clonedImg, clonedImgBitmap);
                     yoloV8Ncnn.loadModel(getAssets(), 0, 1, 0);
-                    DetectionResult[] results = yoloV8Ncnn.detectObjects(clonedImg);
+                    DetectionResult[] results = yoloV8Ncnn.detectObjects(clonedImgBitmap);
 
                     if (results != null && results.length > 0) {
                         for (DetectionResult result : results) {

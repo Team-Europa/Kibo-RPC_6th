@@ -15,6 +15,7 @@
 #include <android/asset_manager_jni.h>
 #include <android/native_window_jni.h>
 #include <android/native_window.h>
+#include <android/bitmap.h>
 
 #include <android/log.h>
 
@@ -148,18 +149,41 @@ JNIEXPORT jboolean JNICALL Java_jp_jaxa_iss_kibo_rpc_defaultapk_YOLOv8Ncnn_loadM
 }
 
 JNIEXPORT jobjectArray JNICALL
-Java_jp_jaxa_iss_kibo_rpc_defaultapk_YOLOv8Ncnn_detectObjects(JNIEnv* env, jobject thiz, jobject matObj)
+Java_jp_jaxa_iss_kibo_rpc_defaultapk_YOLOv8Ncnn_detectObjects(JNIEnv* env, jobject thiz, jobject bitmapObj)
 {
     cv::Mat input;
-    {
-        jclass matClass = env->GetObjectClass(matObj);
-        jmethodID getNativeObjAddr = env->GetMethodID(matClass, "getNativeObjAddr", "()J");
-        jlong matAddr = env->CallLongMethod(matObj, getNativeObjAddr);
-        env->DeleteLocalRef(matClass);
+    AndroidBitmapInfo info;
+    void* pixels = nullptr;
 
-        cv::Mat& inputRef = *(cv::Mat*)matAddr;
-        inputRef.copyTo(input);
+    // Get Bitmap Info
+    if (AndroidBitmap_getInfo(env, bitmapObj, &info) != ANDROID_BITMAP_RESULT_SUCCESS){
+        return nullptr;
     }
+
+    // Set pixel buffer zone
+    if (AndroidBitmap_lockPixels(env, bitmapObj, &pixels) != ANDROID_BITMAP_RESULT_SUCCESS){
+        return nullptr;
+    }
+
+    // Create OpenCV Mat object
+    if(info.format == ANDROID_BITMAP_FORMAT_RGBA_8888){
+        cv::Mat temp(info.height, info.width, CV_8UC4, pixels);
+        cv::cvtColor(temp, input, cv::COLOR_RGBA2RGB);
+    }
+    else {
+        AndroidBitmap_unlockPixels(env, bitmapObj);
+        return nullptr;
+    }
+
+//    {
+//        jclass matClass = env->GetObjectClass(matObj);
+//        jmethodID getNativeObjAddr = env->GetMethodID(matClass, "getNativeObjAddr", "()J");
+//        jlong matAddr = env->CallLongMethod(matObj, getNativeObjAddr);
+//        env->DeleteLocalRef(matClass);
+//
+//        cv::Mat& inputRef = *(cv::Mat*)matAddr;
+//        inputRef.copyTo(input);
+//    }
 
     std::vector<Object> objects;
 
@@ -167,6 +191,7 @@ Java_jp_jaxa_iss_kibo_rpc_defaultapk_YOLOv8Ncnn_detectObjects(JNIEnv* env, jobje
         ncnn::MutexLockGuard g(lock);
 
         if (!g_yolov8) {
+            AndroidBitmap_unlockPixels(env, bitmapObj);
             return nullptr;
         }
         g_yolov8->detect(input, objects);

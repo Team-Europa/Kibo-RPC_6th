@@ -1,6 +1,7 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk;
 
 import android.content.res.AssetManager;
+import android.graphics.Bitmap;
 
 import org.opencv.core.Mat;
 
@@ -14,6 +15,6 @@ public class YOLOv8Ncnn
     }
 
     public native boolean loadModel(AssetManager mgr, int taskid, int modelid, int cpugpu);
-    public native DetectionResult[] detectObjects(Mat mat);
+    public native DetectionResult[] detectObjects(Bitmap bitmap);
     public native SegDetectionResult[] detectSegObjects(Mat mat);
 }
