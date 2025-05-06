@@ -24,7 +24,6 @@ import jp.jaxa.iss.kibo.rpc.defaultapk.model.DetectionResult;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ImageProcessUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.model.PointWithQuaternion;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils;
-import jp.jaxa.iss.kibo.rpc.defaultapk.model.SegDetectionResult;
 
 
 import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
@@ -32,7 +31,7 @@ import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
 public class YourService extends KiboRpcService {
     private CamParameter navCamParameter = new CamParameter();
     private CamParameter dockCamParameter = new CamParameter();
-    YOLOv8Ncnn yoloV8Ncnn = new YOLOv8Ncnn();
+    YOLO11Ncnn yolo11Ncnn = new YOLO11Ncnn();
 
     private int saveImgNum = 0;
 
@@ -40,6 +39,7 @@ public class YourService extends KiboRpcService {
     protected void runPlan1(){
         api.startMission();
         initCamParameter();
+        yolo11Ncnn.loadModel(getAssets(), 0, 3, 0);
         Thread visionThread = new Thread(new Vision());
         visionThread.start();
         moveToWithRetry(point1_1,1);
@@ -49,11 +49,11 @@ public class YourService extends KiboRpcService {
         moveToWithRetry(point4_1,1);
         moveToWithRetry(point4_2,1);
         moveToWithRetry(astronautPQ,10);
-        visionThread.interrupt();
-        SystemClock.sleep(3000);
         api.setAreaInfo(1,"compass",1);
         api.reportRoundingCompletion();
         api.notifyRecognitionItem();
+        SystemClock.sleep(5000);
+        visionThread.interrupt();
         api.takeTargetItemSnapshot();
     }
 
@@ -110,7 +110,7 @@ public class YourService extends KiboRpcService {
 
                 try {
                     long processingTime = System.currentTimeMillis() - pastTime;
-                    Thread.sleep(100);
+                    Thread.sleep(300);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -168,8 +168,8 @@ public class YourService extends KiboRpcService {
                     Imgproc.cvtColor(clonedImg, clonedImg, Imgproc.COLOR_GRAY2RGBA);
                     Bitmap clonedImgBitmap = Bitmap.createBitmap(clonedImg.width(), clonedImg.height(), Bitmap.Config.ARGB_8888);
                     Utils.matToBitmap(clonedImg, clonedImgBitmap);
-                    yoloV8Ncnn.loadModel(getAssets(), 0, 1, 0);
-                    DetectionResult[] results = yoloV8Ncnn.detectObjects(clonedImgBitmap);
+//                    yolo11Ncnn.loadModel(getAssets(), 0, 1, 0);
+                    DetectionResult[] results = yolo11Ncnn.detectObjects(clonedImgBitmap);
 
                     if (results != null && results.length > 0) {
                         for (DetectionResult result : results) {
@@ -181,21 +181,21 @@ public class YourService extends KiboRpcService {
                     }
 
 
-                    yoloV8Ncnn.loadModel(getAssets(), 2, 1, 0);
-                    SegDetectionResult[] results_seg = yoloV8Ncnn.detectSegObjects(clonedImg);
-
-                    if (results != null && results.length > 0) {
-                        Log.i("Detection", "Found " + results.length + " objects");
-                        for (int j = 0; j < results.length; j++) {
-                            SegDetectionResult r = results_seg[j];
-                            Log.i("Object-" + j, String.format(
-                                    "Label:%d Prob:%.2f Box:[%d,%d,%d,%d] MaskBytes:%d",
-                                    r.label, r.prob, r.x, r.y, r.width, r.height, r.mask.length
-                            ));
-                        }
-                    } else {
-                        Log.i("Detection", "No objects detected");
-                    }
+//                    yolo11Ncnn.loadModel(getAssets(), 2, 1, 0);
+////                  SegDetectionResult[] results_seg = yolo11Ncnn.detectSegObjects(clonedImg);
+////
+////                    if (results != null && results.length > 0) {
+////                        Log.i("Detection", "Found " + results.length + " objects");
+////                        for (int j = 0; j < results.length; j++) {
+////                            SegDetectionResult r = results_seg[j];
+////                            Log.i("Object-" + j, String.format(
+////                                    "Label:%d Prob:%.2f Box:[%d,%d,%d,%d] MaskBytes:%d",
+////                                    r.label, r.prob, r.x, r.y, r.width, r.height, r.mask.length
+////                            ));
+////                        }
+////                    } else {
+////                        Log.i("Detection", "No objects detected");
+////                    }
 
                     clonedImg.release();
                 }else{Log.i("lostItemBoardImg","lostItemBoardImg is null");}
