@@ -21,4 +21,8 @@ class Constants {
 
     static final Double[] navCamDistFromCenter = {-0.0422, -0.0826, 0.1177};
     static final Double[] dockCamDistFromCenter = {-0.054, -0.0064, 0.1061};
+
+    static final String[] tresure_item = {"crystal", "diamond", "emerald"};
+    static final String[] landmark_item =
+            {"Treasure_box", "coin", "compass", "coral", "fossil", "key", "letter", "shell"};
 }

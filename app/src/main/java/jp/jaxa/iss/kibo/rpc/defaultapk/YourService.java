@@ -173,7 +173,7 @@ public class YourService extends KiboRpcService {
 
                     if (results != null && results.length > 0) {
                         for (DetectionResult result : results) {
-                            Log.i("YOLO11", "Label: " + result.label + ", Prob: " + result.prob +
+                            Log.i("YOLO11", "Label: " + tresure_item[result.label] + ", Prob: " + result.prob +
                                     ", Rect: (" + result.x + "," + result.y + "," + result.width + "," + result.height + ")");
                         }
                     } else {
