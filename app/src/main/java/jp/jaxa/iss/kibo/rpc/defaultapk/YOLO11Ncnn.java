@@ -16,5 +16,5 @@ public class YOLO11Ncnn
 
     public native boolean loadModel(AssetManager mgr, int taskid, int modelid, int cpugpu);
     public native DetectionResult[] detectObjects(Bitmap bitmap);
-    public native SegDetectionResult[] detectSegObjects(Mat mat);
+    public native SegDetectionResult[] detectSegObjects(Bitmap bitmap);
 }
