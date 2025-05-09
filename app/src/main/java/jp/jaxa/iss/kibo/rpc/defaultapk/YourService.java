@@ -18,11 +18,10 @@ import gov.nasa.arc.astrobee.Result;
 import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
-import jp.jaxa.iss.kibo.rpc.defaultapk.model.SegDetectionResult;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.CamParameter;
-import jp.jaxa.iss.kibo.rpc.defaultapk.model.DetectionResult;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ImageProcessUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.model.PointWithQuaternion;
+import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ItemDetectorUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils;
 
 
@@ -31,12 +30,13 @@ import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
 public class YourService extends KiboRpcService {
     private CamParameter navCamParameter = new CamParameter();
     private CamParameter dockCamParameter = new CamParameter();
-    YOLO11Ncnn yolo11Ncnn = new YOLO11Ncnn();
+    private ItemDetectorUtils itemDetectorUtils;
 
     private int saveImgNum = 0;
 
     @Override
     protected void runPlan1(){
+        itemDetectorUtils = new ItemDetectorUtils(getAssets());
         api.startMission();
         initCamParameter();
         Thread visionThread = new Thread(new Vision());
@@ -162,34 +162,10 @@ public class YourService extends KiboRpcService {
                     Imgproc.cvtColor(lostItemBoardImg, lostItemBoardImg, Imgproc.COLOR_GRAY2RGBA);
                     Bitmap lostItemBoardBitmap = Bitmap.createBitmap(lostItemBoardImg.width(), lostItemBoardImg.height(), Bitmap.Config.ARGB_8888);
                     Utils.matToBitmap(lostItemBoardImg, lostItemBoardBitmap);
-                    yolo11Ncnn.loadModel(getAssets(), 0, 3, 0);
-                    DetectionResult[] results = yolo11Ncnn.detectObjects(lostItemBoardBitmap);
 
-                    if (results != null && results.length > 0) {
-                        for (DetectionResult result : results) {
-                            Log.i("YOLO11", "Label: " + tresure_item[result.label] + ", Prob: " + result.prob +
-                                    ", Rect: (" + result.x + "," + result.y + "," + result.width + "," + result.height + ")");
-                        }
-                    } else {
-                        Log.w("YOLO11", "No objects detected");
-                    }
+                    itemDetectorUtils.detectTresureItem(lostItemBoardBitmap);
+                    itemDetectorUtils.detectLandmarkItem(lostItemBoardBitmap);
 
-                    yolo11Ncnn.loadModel(getAssets(), 1, 3, 0);
-                    SegDetectionResult[] results_seg = yolo11Ncnn.detectSegObjects(lostItemBoardBitmap);
-
-                    if (results_seg != null && results_seg.length > 0) {
-                        Log.i("Detection", "Found " + results_seg.length + " objects");
-                        for (int j = 0; j < results_seg.length; j++) {
-                            SegDetectionResult r = results_seg[j];
-                            Log.i("Object-" + j, String.format("Label:%s Prob:%.2f Box:[%d,%d,%d,%d] MaskBytes:%d",
-                                    landmark_item[r.label],
-                                    r.prob,
-                                    r.x, r.y, r.width, r.height,
-                                    r.mask.length));
-                        }
-                    } else {
-                        Log.i("Detection", "No objects detected");
-                    }
                 }else{Log.i("lostItemBoardImg","lostItemBoardImg is null");}
             }
         }
