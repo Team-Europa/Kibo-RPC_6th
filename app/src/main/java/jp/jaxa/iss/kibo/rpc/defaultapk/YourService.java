@@ -3,6 +3,7 @@ package jp.jaxa.iss.kibo.rpc.defaultapk;
 import android.graphics.Bitmap;
 import android.os.SystemClock;
 import android.util.Log;
+import android.util.Pair;
 
 import org.opencv.aruco.Aruco;
 import org.opencv.core.Mat;
@@ -46,11 +47,8 @@ public class YourService extends KiboRpcService {
         moveToWithRetry(point4_1,1);
         moveToWithRetry(point4_2,1);
         moveToWithRetry(astronautPQ,10);
-        api.setAreaInfo(1,"compass",1);
-        api.reportRoundingCompletion();
-        api.notifyRecognitionItem();
-        SystemClock.sleep(5000);
         visionThread.interrupt();
+        reportAreaInfoAndEndRounding();
         api.takeTargetItemSnapshot();
     }
 
@@ -153,6 +151,16 @@ public class YourService extends KiboRpcService {
                 }else{Log.i("lostItemBoardImg","lostItemBoardImg is null");}
             }
         }
+    }
+
+    private void reportAreaInfoAndEndRounding() {
+        for(int areaNum = 1; areaNum <= 4; areaNum++){
+            Pair<String, Integer> areaInfo = itemDetectorUtils.getMaxFreqItemData(areaNum);
+            if (areaInfo.first != null && areaInfo.second != null) {
+                api.setAreaInfo(areaNum, areaInfo.first, areaInfo.second);
+            } else { Log.i("Report", "areaInfo is null for areaNum: " + areaNum); }
+        }
+        api.reportRoundingCompletion();
     }
 
     private boolean moveToWithRetry(PointWithQuaternion pq, int loopMAX_time) {
