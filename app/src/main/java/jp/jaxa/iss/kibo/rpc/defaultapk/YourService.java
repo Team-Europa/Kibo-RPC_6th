@@ -4,10 +4,8 @@ import android.graphics.Bitmap;
 import android.os.SystemClock;
 import android.util.Log;
 
-import org.opencv.android.Utils;
 import org.opencv.aruco.Aruco;
 import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -54,16 +52,6 @@ public class YourService extends KiboRpcService {
         SystemClock.sleep(5000);
         visionThread.interrupt();
         api.takeTargetItemSnapshot();
-    }
-
-    @Override
-    protected void runPlan2(){
-        // write your plan 2 here
-    }
-
-    @Override
-    protected void runPlan3(){
-        // write your plan 3 here
     }
 
     class Vision implements Runnable {
@@ -115,10 +103,8 @@ public class YourService extends KiboRpcService {
                     break;
                 }
             }
-
             executorService.shutdown();
         }
-
     }
 
     private void initCamParameter() {
@@ -159,12 +145,10 @@ public class YourService extends KiboRpcService {
                     api.saveMatImage(lostItemBoardImg,"image_" + saveImgNum + ".png");
                     saveImgNum++;
 
-                    Imgproc.cvtColor(lostItemBoardImg, lostItemBoardImg, Imgproc.COLOR_GRAY2RGBA);
-                    Bitmap lostItemBoardBitmap = Bitmap.createBitmap(lostItemBoardImg.width(), lostItemBoardImg.height(), Bitmap.Config.ARGB_8888);
-                    Utils.matToBitmap(lostItemBoardImg, lostItemBoardBitmap);
+                    Bitmap lostItemBoardBitmap = ImageProcessUtils.getBitmapFromMat(lostItemBoardImg);
 
-                    itemDetectorUtils.detectTresureItem(lostItemBoardBitmap);
-                    itemDetectorUtils.detectLandmarkItem(lostItemBoardBitmap);
+                    itemDetectorUtils.detectTresureItem(lostItemBoardBitmap, id);
+                    itemDetectorUtils.detectLandmarkItem(lostItemBoardBitmap, id);
 
                 }else{Log.i("lostItemBoardImg","lostItemBoardImg is null");}
             }

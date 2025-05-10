@@ -19,7 +19,7 @@ public class ItemDetectorUtils {
         this.assetManager = assetManager;
     }
 
-    public void detectTresureItem(Bitmap bitmap){
+    public void detectTresureItem(Bitmap bitmap, Integer areaNum){
         yolo11Ncnn.loadModel(assetManager, 0, 3, 0);
         DetectionResult[] results = yolo11Ncnn.detectObjects(bitmap);
 
@@ -33,7 +33,7 @@ public class ItemDetectorUtils {
         }
     }
 
-    public void detectLandmarkItem(Bitmap bitmap){
+    public void detectLandmarkItem(Bitmap bitmap, Integer areaNum){
         yolo11Ncnn.loadModel(assetManager, 1, 3, 0);
         SegDetectionResult[] results_seg = yolo11Ncnn.detectSegObjects(bitmap);
 
