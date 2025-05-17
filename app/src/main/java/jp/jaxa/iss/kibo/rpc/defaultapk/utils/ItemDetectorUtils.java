@@ -19,19 +19,28 @@ public class ItemDetectorUtils {
     private AssetManager assetManager;
     private static final String[] tresure_item = {"crystal", "diamond", "emerald"};
     private static final String[] landmark_item =
-            {"treasure_box", "coin", "compass", "coral", "fossil", "key", "letter", "shell"};
+            {"treasure_box", "coin", "compass", "coral", "fossil", "key", "treasure_boxtreasure_box", "shell"};
 
     private Map<Integer, List<Pair<String, Integer>>> areaLandmarkDatas = new HashMap<>();
+    private Map<Integer, List<String>> areaTreasureDatas = new HashMap<>();
 
     public ItemDetectorUtils(AssetManager assetManager) {
         this.assetManager = assetManager;
     }
 
-    public void detectTresureItem(Bitmap bitmap, Integer areaNum){
+    public void detectTreasureItem(Bitmap bitmap, Integer areaNum){
         yolo11Ncnn.loadModel(assetManager, 0, 3, 0);
         DetectionResult[] results = yolo11Ncnn.detectObjects(bitmap);
 
         if (results != null && results.length > 0) {
+            List<String> treasureList = areaTreasureDatas.get(areaNum);
+            if (treasureList == null) {
+                treasureList = new ArrayList<>();
+                areaTreasureDatas.put(areaNum, treasureList);
+            }
+
+            treasureList.add(tresure_item[results[0].label]);
+
             for (DetectionResult result : results) {
                 Log.i("YOLO11", "Label: " + tresure_item[result.label] + ", Prob: " + result.prob +
                         ", Rect: (" + result.x + "," + result.y + "," + result.width + "," + result.height + ")");
@@ -40,6 +49,32 @@ public class ItemDetectorUtils {
             Log.w("YOLO11", "No objects detected");
         }
     }
+
+    public Integer getTargetArea(String targetTreasure) {
+        Map<Integer, Integer> countMap = new HashMap<>();
+        int maxCount = 0;
+        Integer resultKey = null;
+
+        for (Map.Entry<Integer, List<String>> entry : areaTreasureDatas.entrySet()) {
+            Integer areaNum = entry.getKey();
+            List<String> treasureList = entry.getValue();
+
+            int count = 0;
+            for (String treasure : treasureList) {
+                if (treasure.equals(targetTreasure)) {
+                    count++;
+                }
+            }
+
+            if (count > maxCount) {
+                maxCount = count;
+                resultKey = areaNum;
+            }
+        }
+
+        return resultKey;
+    }
+
 
     public void detectLandmarkItem(Bitmap bitmap, Integer areaNum) {
         yolo11Ncnn.loadModel(assetManager, 1, 3, 0);
@@ -91,7 +126,7 @@ public class ItemDetectorUtils {
         float maxProb = -1f;
     }
 
-    public Pair<String, Integer> getMaxFreqItemData(Integer areaNum) {
+    public Pair<String, Integer> getMaxFreqLandmarkItemData(Integer areaNum) {
         List<Pair<String, Integer>> visionDataList = areaLandmarkDatas.get(areaNum);
 
         if (visionDataList == null || visionDataList.isEmpty()) { return null; }
@@ -141,5 +176,12 @@ public class ItemDetectorUtils {
         }
         list.add(visionData);
         areaLandmarkDatas.put(areaNum, list);
+    }
+
+    public String detectRecognizedResult(Bitmap bitmap){
+        yolo11Ncnn.loadModel(assetManager, 0, 3, 0);
+         DetectionResult result = yolo11Ncnn.detectObjects(bitmap)[0];
+        if(result !=null){ return  tresure_item[result.label]; }
+        return null;
     }
 }

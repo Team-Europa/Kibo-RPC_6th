@@ -49,7 +49,9 @@ public class YourService extends KiboRpcService {
         moveToWithRetry(astronautPQ,10);
         visionThread.interrupt();
         reportAreaInfoAndEndRounding();
-        api.takeTargetItemSnapshot();
+        api.notifyRecognitionItem();
+        String targetItem =  recognizeTargetItem();
+        endGameTask(itemDetectorUtils.getTargetArea(targetItem));
     }
 
     class Vision implements Runnable {
@@ -123,7 +125,7 @@ public class YourService extends KiboRpcService {
 
             for (int i = 0; i < arucoIDs.rows(); i++) {
                 int id = (int) arucoIDs.get(i, 0)[0]-100;
-                if (id < 0 || id > 4) { continue; }
+                if (id < 1 || id > 4) { continue; }
                 Mat rvec = rvecs.row(i);
                 Mat tvec = tvecs.row(i);
 
@@ -145,7 +147,7 @@ public class YourService extends KiboRpcService {
 
                     Bitmap lostItemBoardBitmap = ImageProcessUtils.getBitmapFromMat(lostItemBoardImg);
 
-                    itemDetectorUtils.detectTresureItem(lostItemBoardBitmap, id);
+                    itemDetectorUtils.detectTreasureItem(lostItemBoardBitmap, id);
                     itemDetectorUtils.detectLandmarkItem(lostItemBoardBitmap, id);
 
                 }else{Log.i("lostItemBoardImg","lostItemBoardImg is null");}
@@ -155,7 +157,7 @@ public class YourService extends KiboRpcService {
 
     private void reportAreaInfoAndEndRounding() {
         for(int areaNum = 1; areaNum <= 4; areaNum++){
-            Pair<String, Integer> areaInfo = itemDetectorUtils.getMaxFreqItemData(areaNum);
+            Pair<String, Integer> areaInfo = itemDetectorUtils.getMaxFreqLandmarkItemData(areaNum);
             if (areaInfo.first != null && areaInfo.second != null) {
                 api.setAreaInfo(areaNum, areaInfo.first, areaInfo.second);
             } else { Log.i("Report", "areaInfo is null for areaNum: " + areaNum); }
@@ -176,6 +178,94 @@ public class YourService extends KiboRpcService {
             ++loopCounter;
         }
         return result.hasSucceeded();
+    }
+
+    private String recognizeTargetItem(){
+        while(true){
+            Mat img = api.getMatNavCam();
+            List<Mat> arucoCorners = new ArrayList<>();
+            Mat arucoIDs = new Mat();
+
+            Aruco.detectMarkers(img, Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250), arucoCorners, arucoIDs);
+
+            if(!arucoIDs.empty()) {
+                Mat rvecs = new Mat();
+                Mat tvecs = new Mat();
+                Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, navCamParameter.arUcoCalibCamMatrix, navCamParameter.zeroDistCoeffs, rvecs, tvecs);
+
+                for (int i = 0; i < arucoIDs.rows(); i++) {
+                    int id = (int) arucoIDs.get(i, 0)[0]-100;
+                    if (id !=0) { continue; }
+                    Mat rvec = rvecs.row(i);
+                    Mat tvec = tvecs.row(i);
+
+                    Mat recognizeItemBoardImg = ImageProcessUtils.getWarpItemImg(img, rvec, tvec, navCamParameter.arUcoCalibCamMatrix, navCamParameter.zeroDoubleDistCoeffs);
+                    Bitmap recognizeItemBoardBitmap = ImageProcessUtils.getBitmapFromMat(recognizeItemBoardImg);
+                    String targetItem = itemDetectorUtils.detectRecognizedResult(recognizeItemBoardBitmap);
+                    if(targetItem != null){ return targetItem; }
+                }
+            }
+            SystemClock.sleep(100);
+        }
+    }
+
+    private void endGameTask(Integer areaNum){
+        switch (areaNum){
+            case 1:
+                moveToWithRetry(targetPQ_area1, 5);
+                break;
+            case 2:
+                moveToWithRetry(targetPQ_area2, 5);
+                break;
+            case 3:
+                moveToWithRetry(targetPQ_area3, 5);
+                break;
+            default:
+                moveToWithRetry(targetPQ_area4, 5);
+                break;
+        }
+
+        Point robotPos = api.getRobotKinematics().getPosition();
+        SystemClock.sleep(3500);
+        Point error = calcArucoPos(ImageProcessUtils.calibCamImg(api.getMatNavCam(), navCamParameter), areaNum);
+        if(error != null){
+            if(areaNum == 2||areaNum == 3){
+                moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), robotPos.getY() - error.getY(), targetZ_area23), new Quaternion(0.5f, 0.5f, -0.5f, 0.5f)),5);
+            }else if(areaNum == 1){
+                moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), targetY_area1, robotPos.getZ() + error.getY()), new Quaternion(0f, 0f, -0.707f, 0.707f)),5);
+            }else {
+                moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - error.getX(), robotPos.getZ() + error.getY()), new Quaternion(0f,0f,-1f,0f)),5);
+            }
+        }
+
+        api.takeTargetItemSnapshot();
+    }
+
+    private Point calcArucoPos(Mat img, Integer targetAreaNum) {
+        List<Mat> arucoCorners = new ArrayList<>();
+        Mat arucoIDs = new Mat();
+
+        Aruco.detectMarkers(img, Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250), arucoCorners, arucoIDs);
+
+        if(!arucoIDs.empty()) {
+            Mat rvecs = new Mat();
+            Mat tvecs = new Mat();
+            Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, navCamParameter.arUcoCalibCamMatrix, navCamParameter.zeroDoubleDistCoeffs, rvecs, tvecs);
+
+            for (int i = 0; i < arucoIDs.rows(); i++) {
+                int id = (int) arucoIDs.get(i, 0)[0]-100;
+                if(id != targetAreaNum){continue;}
+                Mat tvec = tvecs.row(i);
+
+                double[] tvecArray = tvec.get(0, 0);
+                double tx = tvecArray[0];
+                double ty = tvecArray[1];
+                double tz = tvecArray[2];
+
+                return new Point(tx, ty, tz);
+            }
+        }
+        return null;
     }
 }
 
