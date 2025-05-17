@@ -19,7 +19,7 @@ public class ItemDetectorUtils {
     private AssetManager assetManager;
     private static final String[] tresure_item = {"crystal", "diamond", "emerald"};
     private static final String[] landmark_item =
-            {"treasure_box", "coin", "compass", "coral", "fossil", "key", "treasure_boxtreasure_box", "shell"};
+            {"treasure_box", "coin", "compass", "coral", "fossil", "key", "treasure_box", "shell"};
 
     private Map<Integer, List<Pair<String, Integer>>> areaLandmarkDatas = new HashMap<>();
     private Map<Integer, List<String>> areaTreasureDatas = new HashMap<>();

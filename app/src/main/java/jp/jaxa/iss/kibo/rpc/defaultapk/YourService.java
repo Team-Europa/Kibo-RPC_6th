@@ -45,7 +45,6 @@ public class YourService extends KiboRpcService {
         moveToWithRetry(point2,1);
         moveToWithRetry(point3,1);
         moveToWithRetry(point4_1,1);
-        moveToWithRetry(point4_2,1);
         moveToWithRetry(astronautPQ,10);
         visionThread.interrupt();
         reportAreaInfoAndEndRounding();
