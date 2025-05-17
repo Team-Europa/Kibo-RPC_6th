@@ -182,7 +182,7 @@ public class YourService extends KiboRpcService {
 
     private String recognizeTargetItem(){
         while(true){
-            Mat img = api.getMatNavCam();
+            Mat img = ImageProcessUtils.calibCamImg(api.getMatNavCam(), navCamParameter);
             List<Mat> arucoCorners = new ArrayList<>();
             Mat arucoIDs = new Mat();
 
