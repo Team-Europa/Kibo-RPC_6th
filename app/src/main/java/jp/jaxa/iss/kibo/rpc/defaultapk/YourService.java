@@ -1,6 +1,5 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk;
 
-import android.graphics.Bitmap;
 import android.os.SystemClock;
 import android.util.Log;
 import android.util.Pair;
@@ -35,7 +34,7 @@ public class YourService extends KiboRpcService {
 
     @Override
     protected void runPlan1(){
-        itemDetectorUtils = new ItemDetectorUtils(getAssets());
+        itemDetectorUtils = new ItemDetectorUtils(getApplicationContext());
         api.startMission();
         initCamParameter();
         Thread visionThread = new Thread(new Vision());
@@ -144,10 +143,8 @@ public class YourService extends KiboRpcService {
                     api.saveMatImage(lostItemBoardImg,"image_" + saveImgNum + ".png");
                     saveImgNum++;
 
-                    Bitmap lostItemBoardBitmap = ImageProcessUtils.getBitmapFromMat(lostItemBoardImg);
-
-                    itemDetectorUtils.detectTreasureItem(lostItemBoardBitmap, id);
-                    itemDetectorUtils.detectLandmarkItem(lostItemBoardBitmap, id);
+                    itemDetectorUtils.detectTreasureItem(lostItemBoardImg, id);
+                    itemDetectorUtils.detectLandmarkItem(lostItemBoardImg, id);
 
                 }else{Log.i("lostItemBoardImg","lostItemBoardImg is null");}
             }
@@ -199,8 +196,7 @@ public class YourService extends KiboRpcService {
                     Mat tvec = tvecs.row(i);
 
                     Mat recognizeItemBoardImg = ImageProcessUtils.getWarpItemImg(img, rvec, tvec, navCamParameter.arUcoCalibCamMatrix, navCamParameter.zeroDoubleDistCoeffs);
-                    Bitmap recognizeItemBoardBitmap = ImageProcessUtils.getBitmapFromMat(recognizeItemBoardImg);
-                    String targetItem = itemDetectorUtils.detectRecognizedResult(recognizeItemBoardBitmap);
+                    String targetItem = itemDetectorUtils.detectRecognizedResult(recognizeItemBoardImg);
                     if(targetItem != null){ return targetItem; }
                 }
             }

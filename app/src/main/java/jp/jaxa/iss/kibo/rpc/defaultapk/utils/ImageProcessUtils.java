@@ -77,11 +77,4 @@ public class ImageProcessUtils {
         Imgproc.warpPerspective(originImg, frontView, transformationMatrix, frontView.size());
         return frontView;
     }
-
-    public static Bitmap getBitmapFromMat(Mat mat){
-        Imgproc.cvtColor(mat, mat, Imgproc.COLOR_GRAY2RGBA);
-        Bitmap bitmap = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(mat, bitmap);
-        return bitmap;
-    }
 }
