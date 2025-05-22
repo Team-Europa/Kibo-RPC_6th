@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jp.jaxa.iss.kibo.rpc.defaultapk.YOLO11Ncnn;
 import jp.jaxa.iss.kibo.rpc.defaultapk.model.DetectionResult;
 import jp.jaxa.iss.kibo.rpc.defaultapk.model.SegDetectionResult;
 

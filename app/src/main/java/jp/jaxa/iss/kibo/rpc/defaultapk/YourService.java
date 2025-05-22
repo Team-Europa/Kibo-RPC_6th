@@ -45,7 +45,6 @@ public class YourService extends KiboRpcService {
         moveToWithRetry(point2,1);
         moveToWithRetry(point3,1);
         moveToWithRetry(point4_1,1);
-        moveToWithRetry(point4_2,1);
         moveToWithRetry(astronautPQ,10);
         visionThread.interrupt();
         reportAreaInfoAndEndRounding();
@@ -182,7 +181,7 @@ public class YourService extends KiboRpcService {
 
     private String recognizeTargetItem(){
         while(true){
-            Mat img = api.getMatNavCam();
+            Mat img = ImageProcessUtils.calibCamImg(api.getMatNavCam(), navCamParameter);
             List<Mat> arucoCorners = new ArrayList<>();
             Mat arucoIDs = new Mat();
 
