@@ -1,147 +1,100 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk.utils;
 
 import android.content.Context;
-import android.content.res.AssetManager;
 import android.util.Log;
 import android.util.Pair;
 
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.Size;
-import org.opencv.imgproc.Imgproc;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.util.*;
 
-import ai.onnxruntime.*;
-
 import jp.jaxa.iss.kibo.rpc.defaultapk.model.DetectionResult;
-import jp.jaxa.iss.kibo.rpc.defaultapk.model.SegDetectionResult;
+
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
 
 public class ItemDetectorUtils {
-    private final AssetManager assetManager;
-    private final Context context;
-    private final OrtEnvironment env;
-    private OrtSession treasureSession;
-    private OrtSession landMarkSession;
+    private ONNXDetect onnxDetect;
 
     private static final String[] treasure_items = {"crystal", "diamond", "emerald"};
     private static final String[] landmark_items = {
             "treasure_box", "coin", "compass", "coral",
-            "fossil", "key", "treasure_boxtreasure_box", "shell"
-    };
+            "fossil", "key", "treasure_boxtreasure_box", "shell"};
 
     private final Map<Integer, List<Pair<String, Integer>>> areaLandmarkDatas = new HashMap<>();
     private final Map<Integer, List<String>> areaTreasureDatas = new HashMap<>();
 
     public ItemDetectorUtils(Context context) {
-        this.context = context;
-        this.assetManager = context.getAssets();
-        env = OrtEnvironment.getEnvironment();
-        try {
-            loadModel();
-        } catch (Exception e) {
-            Log.e("ItemDetectorUtils", "Model loading failed", e);
-        }
+        onnxDetect = new ONNXDetect(context);
     }
 
-    private void loadModel() {
-        try {
-            String modelPath1 = copyAssetToFile("treasureDEIM.onnx");
-            String modelPath2 = copyAssetToFile("landMarkDEIM.onnx");
-
-            if (modelPath1 != null) {
-                treasureSession = env.createSession(modelPath1, new OrtSession.SessionOptions());
-            } else {
-                Log.e("ItemDetectorUtils", "Failed to load treasure model file.");
-            }
-            if (modelPath2 != null) {
-                landMarkSession = env.createSession(modelPath2, new OrtSession.SessionOptions());
-            } else {
-                Log.e("ItemDetectorUtils", "Failed to load landmark model file.");
-            }
-        } catch (Exception e) {
-            Log.e("ItemDetectorUtils", "loadModel failed", e);
-        }
-    }
-
-    public void detectTreasureItem(Mat image, Integer areaNum) {
-        try {
-            float[][][] input = preprocessMat(image, 640, 480);
-            OnnxTensor inputTensor = OnnxTensor.createTensor(env, input);
-
-            OrtSession.Result result = treasureSession.run(
-                    Collections.singletonMap(
-                            treasureSession.getInputNames().iterator().next(),
-                            inputTensor
-                    )
-            );
-
-            float[][] output = (float[][]) result.get(0).getValue(); // 假設輸出為 [1, class_count]
-            int maxIndex = argmax(output[0]);
-            String detected = treasure_items[maxIndex];
-
+    private void detectTreasureItem(DetectionResult[] treasureDetectionResults, Integer areaNum){
+        if (treasureDetectionResults != null && treasureDetectionResults.length > 0) {
             List<String> treasureList = areaTreasureDatas.get(areaNum);
             if (treasureList == null) {
                 treasureList = new ArrayList<>();
                 areaTreasureDatas.put(areaNum, treasureList);
             }
-            treasureList.add(detected);
 
-            Log.i("ONNX", "Treasure Detected: " + detected + " at area " + areaNum);
-        } catch (Exception e) {
-            Log.e("ItemDetectorUtils", "detectTreasureItem failed", e);
+            treasureList.add(treasure_items[treasureDetectionResults[0].label]);
+
+            for (DetectionResult result : treasureDetectionResults) {
+                Log.i("DEIM_treasure", "Label: " + treasure_items[result.label] + ", Prob: " + result.prob +
+                        ", Rect: (" + result.x + "," + result.y + "," + result.width + "," + result.height + ")");
+            }
+        } else {
+            Log.w("DEIM_treasure", "No objects detected");
         }
     }
 
-    public void detectLandmarkItem(Mat image, Integer areaNum) {
-        try {
-            float[][][] input = preprocessMat(image, 224, 224); // 根據模型尺寸修改
-            OnnxTensor inputTensor = OnnxTensor.createTensor(env, input);
+    private void detectLandmarkItem(DetectionResult[] landMarkDetectionResults, Integer areaNum) {
 
-            OrtSession.Result result = landMarkSession.run(
-                    Collections.singletonMap(
-                            landMarkSession.getInputNames().iterator().next(),
-                            inputTensor
-                    )
-            );
-            float[][] output = (float[][]) result.get(0).getValue(); // 假設輸出為 [1, class_count]
-
-            int maxIndex = argmax(output[0]);
-            float maxProb = output[0][maxIndex];
-
-            String label = landmark_items[maxIndex];
-            int count = (int) (maxProb * 100); // 假設比例表示可信度
-
-            putVisionData(areaNum, new Pair<>(label, count));
-
-            Log.i("ONNX", "Landmark Detected: " + label + " (prob = " + maxProb + ")");
-        } catch (Exception e) {
-            Log.e("ItemDetectorUtils", "detectLandmarkItem failed", e);
+        if (landMarkDetectionResults == null || landMarkDetectionResults.length == 0) {
+            Log.i("Detection", "No objects detected");
+            return;
         }
+
+        Log.i("Detection", "Found " + landMarkDetectionResults.length + " objects");
+
+        Map<String, LabelStats> labelStatsMap = new HashMap<>();
+        String highestProbLabel = null;
+        float maxProb = -1f;
+
+        for (DetectionResult result : landMarkDetectionResults) {
+            String label = landmark_items[result.label];
+            float prob = result.prob;
+
+            LabelStats stats = labelStatsMap.getOrDefault(label, new LabelStats());
+            stats.count++;
+            if (prob > stats.maxProb) {
+                stats.maxProb = prob;
+            }
+            labelStatsMap.put(label, stats);
+
+            if (prob > maxProb) {
+                maxProb = prob;
+                highestProbLabel = label;
+            }
+
+            Log.i("DEIM_landmark", "Label: " + landmark_items[result.label] + ", Prob: " + result.prob +
+                    ", Rect: (" + result.x + "," + result.y + "," + result.width + "," + result.height + ")");
+        }
+
+        int highestScoreLabelCount = highestProbLabel != null ?
+                labelStatsMap.get(highestProbLabel).count : 0;
+
+        putVisionData(areaNum, new Pair<>(highestProbLabel, highestScoreLabelCount));
     }
 
-    public String detectRecognizedResult(Mat image) {
-        try {
-            float[][][] input = preprocessMat(image, 640, 480);
-            OnnxTensor inputTensor = OnnxTensor.createTensor(env, input);
+    public String detectRecognizedResult(Mat mat){
+        DetectionResult[] detectionResults = onnxDetect.detect(mat,0.5f);
+        DetectionResult result = reMappingTreasureData(detectionResults)[0];
+        if(result !=null){ return  treasure_items[result.label]; }
+        return null;
+    }
 
-            OrtSession.Result result = treasureSession.run(
-                    Collections.singletonMap(
-                            treasureSession.getInputNames().iterator().next(),
-                            inputTensor
-                    )
-            );
-            float[][] output = (float[][]) result.get(0).getValue();
-            int maxIndex = argmax(output[0]);
-
-            return treasure_items[maxIndex];
-        } catch (Exception e) {
-            Log.e("ItemDetectorUtils", "detectRecognizedResult failed", e);
-            return null;
-        }
+    private static class LabelStats {
+        int count = 0;
+        float maxProb = -1f;
     }
 
     public Integer getTargetArea(String targetTreasure) {
@@ -212,51 +165,38 @@ public class ItemDetectorUtils {
         list.add(visionData);
     }
 
-    private int argmax(float[] array) {
-        int maxIdx = 0;
-        for (int i = 1; i < array.length; i++) {
-            if (array[i] > array[maxIdx]) maxIdx = i;
-        }
-        return maxIdx;
+    public void scanItemBoard(Mat mat, Integer areaNum){
+        DetectionResult[] detectionResults = onnxDetect.detect(mat,0.85f);
+
+        DetectionResult[] treasureResults = reMappingTreasureData(detectionResults);
+        detectTreasureItem(treasureResults, areaNum);
+
+        DetectionResult[] landmarkResults = reMappingLandmarkData(detectionResults);
+        detectLandmarkItem(landmarkResults, areaNum);
     }
 
-    private float[][][] preprocessMat(Mat image, int width, int height) {
-        Mat resized = new Mat();
-        Imgproc.resize(image, resized, new Size(width, height));
-        resized.convertTo(resized, CvType.CV_32FC3, 1.0 / 255);
-
-        float[][][] input = new float[1][3][width * height];
-        int index = 0;
-        for (int y = 0; y < resized.rows(); y++) {
-            for (int x = 0; x < resized.cols(); x++) {
-                double[] pixel = resized.get(y, x);
-                input[0][0][index] = (float) pixel[0]; // B
-                input[0][1][index] = (float) pixel[1]; // G
-                input[0][2][index] = (float) pixel[2]; // R
-                index++;
-            }
-        }
-        return input;
+    private DetectionResult[] reMappingTreasureData(DetectionResult[] detectionResults) {
+        return reMapAndFilter(detectionResults, TREASURE_MAPPING);
     }
 
-    private String copyAssetToFile(String assetName) {
-        File file = new File(context.getFilesDir(), assetName);
-        if (!file.exists()) {
-            try {
-                InputStream is = assetManager.open(assetName);
-                FileOutputStream fos = new FileOutputStream(file);
-                byte[] buffer = new byte[4096];
-                int read;
-                while ((read = is.read(buffer)) != -1) {
-                    fos.write(buffer, 0, read);
-                }
-                fos.close();
-                is.close();
-            } catch (Exception e) {
-                Log.e("ItemDetectorUtils", "copyAssetToFile failed for " + assetName, e);
-                return null;
+    private DetectionResult[] reMappingLandmarkData(DetectionResult[] detectionResults) {
+        return reMapAndFilter(detectionResults, LANDMARK_MAPPING);
+    }
+
+    private DetectionResult[] reMapAndFilter(DetectionResult[] detectionResults, Map<Integer, Integer> mapping) {
+        List<DetectionResult> resultList = new ArrayList<>();
+        for (DetectionResult dr : detectionResults) {
+            if (dr != null && mapping.containsKey(dr.label)) {
+                resultList.add(new DetectionResult(
+                        mapping.get(dr.label),
+                        dr.prob,
+                        dr.x,
+                        dr.y,
+                        dr.width,
+                        dr.height
+                ));
             }
         }
-        return file.getAbsolutePath();
+        return resultList.toArray(new DetectionResult[0]);
     }
 }

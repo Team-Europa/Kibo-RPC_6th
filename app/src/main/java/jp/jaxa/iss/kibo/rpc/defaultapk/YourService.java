@@ -143,8 +143,7 @@ public class YourService extends KiboRpcService {
                     api.saveMatImage(lostItemBoardImg,"image_" + saveImgNum + ".png");
                     saveImgNum++;
 
-                    itemDetectorUtils.detectTreasureItem(lostItemBoardImg, id);
-                    itemDetectorUtils.detectLandmarkItem(lostItemBoardImg, id);
+                    itemDetectorUtils.scanItemBoard(lostItemBoardImg, id);
 
                 }else{Log.i("lostItemBoardImg","lostItemBoardImg is null");}
             }
