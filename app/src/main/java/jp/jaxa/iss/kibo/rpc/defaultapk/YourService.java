@@ -44,6 +44,7 @@ public class YourService extends KiboRpcService {
         moveToWithRetry(point2,1);
         moveToWithRetry(point3,1);
         moveToWithRetry(point4_1,1);
+        moveToWithRetry(point4_2,1);
         moveToWithRetry(astronautPQ,10);
         visionThread.interrupt();
         reportAreaInfoAndEndRounding();
@@ -151,11 +152,17 @@ public class YourService extends KiboRpcService {
     }
 
     private void reportAreaInfoAndEndRounding() {
-        for(int areaNum = 1; areaNum <= 4; areaNum++){
+        for(int areaNum = 1; areaNum <= 4; areaNum++) {
             Pair<String, Integer> areaInfo = itemDetectorUtils.getMaxFreqLandmarkItemData(areaNum);
-            if (areaInfo.first != null && areaInfo.second != null) {
-                api.setAreaInfo(areaNum, areaInfo.first, areaInfo.second);
-            } else { Log.i("Report", "areaInfo is null for areaNum: " + areaNum); }
+            if (areaInfo != null) {  // First check if the Pair itself is not null
+                if (areaInfo.first != null && areaInfo.second != null) {
+                    api.setAreaInfo(areaNum, areaInfo.first, areaInfo.second);
+                } else {
+                    Log.i("Report", "areaInfo has null elements for areaNum: " + areaNum);
+                }
+            } else {
+                Log.i("Report", "areaInfo is null for areaNum: " + areaNum);
+            }
         }
         api.reportRoundingCompletion();
     }

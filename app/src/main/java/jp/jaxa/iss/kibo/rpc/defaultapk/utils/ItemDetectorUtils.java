@@ -42,7 +42,7 @@ public class ItemDetectorUtils {
                         ", Rect: (" + result.x + "," + result.y + "," + result.width + "," + result.height + ")");
             }
         } else {
-            Log.w("DEIM_treasure", "No objects detected");
+            Log.i("DEIM_treasure", "No objects detected");
         }
     }
 
@@ -166,7 +166,7 @@ public class ItemDetectorUtils {
     }
 
     public void scanItemBoard(Mat mat, Integer areaNum){
-        DetectionResult[] detectionResults = onnxDetect.detect(mat,0.85f);
+        DetectionResult[] detectionResults = onnxDetect.detect(mat,0.5f);
 
         DetectionResult[] treasureResults = reMappingTreasureData(detectionResults);
         detectTreasureItem(treasureResults, areaNum);

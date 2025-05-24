@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.util.Log;
 
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
@@ -36,7 +37,7 @@ class ONNXDetect {
         try {
             loadModel();
         } catch (Exception e) {
-            Log.e("ItemDetectorUtils", "Model loading failed", e);
+            Log.i("ItemDetectorUtils", "Model loading failed", e);
         }
     }
 
@@ -112,28 +113,29 @@ class ONNXDetect {
 
 
     private float[] preprocessMatToFloatArray(Mat mat, int targetWidth, int targetHeight) {
+        if (mat.empty()) {
+            throw new IllegalArgumentException("Input Mat is empty");
+        }
+        if (mat.channels() != 1 || mat.type() != CvType.CV_8UC1) {
+            throw new IllegalArgumentException("Input Mat must be CV_8UC1 (grayscale)");
+        }
+
         Mat resized = new Mat();
         Imgproc.resize(mat, resized, new Size(targetWidth, targetHeight));
 
-        // 轉成float陣列，並做channel reorder和normalize（依你的模型需求）
-        int channels = resized.channels();
         int imgSize = targetWidth * targetHeight;
-        float[] floatData = new float[channels * imgSize];
+        float[] floatData = new float[3 * imgSize];
 
-        byte[] data = new byte[(int) (resized.total() * resized.channels())];
+        byte[] data = new byte[imgSize];
         resized.get(0, 0, data);
 
-        // 假設BGR轉RGB，且normalize到0~1
         for (int i = 0; i < imgSize; i++) {
-            int b = data[i * 3] & 0xFF;
-            int g = data[i * 3 + 1] & 0xFF;
-            int r = data[i * 3 + 2] & 0xFF;
-
-            // RGB順序
-            floatData[i] = r / 255.0f;
-            floatData[i + imgSize] = g / 255.0f;
-            floatData[i + imgSize * 2] = b / 255.0f;
+            float value = (data[i] & 0xFF) / 255.0f;
+            floatData[i] = value;
+            floatData[i + imgSize] = value;
+            floatData[i + 2 * imgSize] = value;
         }
+
         return floatData;
     }
 
