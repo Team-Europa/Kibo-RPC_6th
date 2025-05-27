@@ -1,8 +1,5 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk.utils;
 
-import android.graphics.Bitmap;
-
-import org.opencv.android.Utils;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
