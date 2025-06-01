@@ -35,14 +35,19 @@ public class YourService extends KiboRpcService {
     @Override
     protected void runPlan1(){
         itemDetectorUtils = new ItemDetectorUtils(getApplicationContext());
-        api.startMission();
-        initCamParameter();
         Thread visionThread = new Thread(new Vision());
+        api.startMission();
+        api.flashlightControlBack(0.05f);
+        api.flashlightControlFront(0.05f);
+        initCamParameter();
         visionThread.start();
-        moveToWithRetry(point1, 1);
-//        moveToWithRetry(point2,1);
-//        moveToWithRetry(point3,1);
-        moveToWithRetry(point4,1);
+        moveToWithRetry(point1_1, 1);
+        moveToWithRetry(point1_2, 1);
+        moveToWithRetry(point2,1);
+        moveToWithRetry(point2_2,1);
+        moveToWithRetry(point3_1,1);
+        moveToWithRetry(point3,1);
+        moveToWithRetry(point4_1,1);
         moveToWithRetry(astronautPQ,1);
         visionThread.interrupt();
         reportAreaInfoAndEndRounding();
