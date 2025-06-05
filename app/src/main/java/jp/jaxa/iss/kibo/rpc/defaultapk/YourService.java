@@ -48,15 +48,17 @@ public class YourService extends KiboRpcService {
 //        moveToWithRetry(point3_1,1);
 //        moveToWithRetry(point3,1);
 //        moveToWithRetry(point4_1,1);
+        moveToWithRetry(init, 1);
         moveToWithRetry(Area1,1);
         moveToWithRetry(Area2,1);
         moveToWithRetry(Area3,1);
         moveToWithRetry(Area4,1);
+        moveToWithRetry(end, 1);
         moveToWithRetry(astronautPQ,1);
         visionThread.interrupt();
         reportAreaInfoAndEndRounding();
         api.notifyRecognitionItem();
-        String targetItem =  recognizeTargetItem();
+        String targetItem = recognizeTargetItem();
         endGameTask(itemDetectorUtils.getTargetArea(targetItem));
     }
 

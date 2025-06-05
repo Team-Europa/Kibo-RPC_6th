@@ -20,10 +20,14 @@ public class Constants {
 //    static final PointWithQuaternion point3 = new PointWithQuaternion(new Point(10.425, -7.5, 5.4), new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
 //    static final PointWithQuaternion point4_1 = new PointWithQuaternion(new Point(11.375, -7.3, 4.425), new Quaternion(0f,0f,-1f,0f));
 //    static final PointWithQuaternion point4_2 = new PointWithQuaternion(new Point(11.375, -6.35, 4.945), new Quaternion(0f,0f,-1f,0f));
-    static final PointWithQuaternion Area1 = new PointWithQuaternion(new Point(11.00, -9.70, 4.70), new Quaternion(0f, 0f, 0.707f, 0.707f));
+
+    // case 1: with 1 area more oasis
+    static final PointWithQuaternion init = new PointWithQuaternion(new Point(10.5, -10.0, 4.45), new Quaternion(0f, 0f, 0.707f, 0.707f));
+    static final PointWithQuaternion Area1 = new PointWithQuaternion(new Point(11.40, -9.4, 5.40), new Quaternion(0f, 0f, 0.707f, 0.707f));
     static final PointWithQuaternion Area2 = new PointWithQuaternion(new Point(11.25, -9.30, 5.25), new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
     static final PointWithQuaternion Area3 = new PointWithQuaternion(new Point(10.60,-7.65,5.25), new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
-    static final PointWithQuaternion Area4 = new PointWithQuaternion(new Point(11.25,-6.55,4.75), new Quaternion(0f,0f,-1f,0f));
+    static final PointWithQuaternion Area4 = new PointWithQuaternion(new Point(11.25,-7.4,4.9), new Quaternion(0f,0f,-1f,0f));
+    static final PointWithQuaternion end = new PointWithQuaternion(new Point(11.25, -6.5,4.9), new Quaternion(0f,0f,-1f,0f));
     static final Double[] navCamDistFromCenter = {-0.0422, -0.0826, 0.1177};
     static final Double[] dockCamDistFromCenter = {-0.054, -0.0064, 0.1061};
 
