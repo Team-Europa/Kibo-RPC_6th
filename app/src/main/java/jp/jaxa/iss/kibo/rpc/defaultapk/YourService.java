@@ -60,6 +60,7 @@ public class YourService extends KiboRpcService {
         api.notifyRecognitionItem();
         String targetItem = recognizeTargetItem();
         endGameTask(itemDetectorUtils.getTargetArea(targetItem));
+        api.shutdownFactory();
     }
 
     class Vision implements Runnable {
