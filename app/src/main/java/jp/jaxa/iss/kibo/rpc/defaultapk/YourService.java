@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import gov.nasa.arc.astrobee.Kinematics;
 import gov.nasa.arc.astrobee.Result;
@@ -87,7 +88,7 @@ public class YourService extends KiboRpcService {
             Mat navImgPast = api.getMatNavCam();
             Mat dockImgPast = api.getMatDockCam();
 
-            while (!Thread.currentThread().isInterrupted()) {
+            while (running && !Thread.currentThread().isInterrupted()) {
                 Mat navImgNow = api.getMatNavCam();
                 Mat dockImgNow = api.getMatDockCam();
 
@@ -131,7 +132,7 @@ public class YourService extends KiboRpcService {
             executorService.shutdown();
             // Wait for mission complete and close executorService correctly
             try {
-                if (!executorService.awaitTermination(10, TimeUnit.SECONDS)){ // TODO: Latency should be test case by case
+                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)){
                     executorService.shutdownNow();
                 }
             } catch (InterruptedException e){

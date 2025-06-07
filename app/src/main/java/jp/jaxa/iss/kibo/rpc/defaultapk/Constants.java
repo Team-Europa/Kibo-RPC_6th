@@ -26,8 +26,9 @@ public class Constants {
     static final PointWithQuaternion Area1 = new PointWithQuaternion(new Point(11.40, -9.40, 4.90), new Quaternion(0f, 0f, 0.707f, 0.707f));
     static final PointWithQuaternion Area2 = new PointWithQuaternion(new Point(11.40, -9.30, 5.25), new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
     static final PointWithQuaternion Area3 = new PointWithQuaternion(new Point(10.45,-7.45,5.25), new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
-    static final PointWithQuaternion Area4 = new PointWithQuaternion(new Point(11.20,-7.35,5.2), new Quaternion(0f,0f,-1f,0f));
-    static final PointWithQuaternion end = new PointWithQuaternion(new Point(11.20, -6.30,4.45), new Quaternion(0f,0f,-1f,0f));
+    static final PointWithQuaternion Area4 = new PointWithQuaternion(new Point(11.40,-7.35,4.90), new Quaternion(0f,0f,-1f,0f));
+    static final PointWithQuaternion end = new PointWithQuaternion(new Point(11.40, -6.30,4.45), new Quaternion(0f,0f,-1f,0f));
+//    static final PointWithQuaternion end2 = new PointWithQuaternion(new Point(11.40, -6.85,4.90), new Quaternion(0f,0f,-1f,0f));
     static final Double[] navCamDistFromCenter = {-0.0422, -0.0826, 0.1177};
     static final Double[] dockCamDistFromCenter = {-0.054, -0.0064, 0.1061};
 
