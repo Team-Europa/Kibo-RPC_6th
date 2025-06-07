@@ -131,7 +131,7 @@ public class YourService extends KiboRpcService {
             executorService.shutdown();
             // Wait for mission complete and close executorService correctly
             try {
-                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)){
+                if (!executorService.awaitTermination(10, TimeUnit.SECONDS)){ // TODO: Latency should be test case by case
                     executorService.shutdownNow();
                 }
             } catch (InterruptedException e){
