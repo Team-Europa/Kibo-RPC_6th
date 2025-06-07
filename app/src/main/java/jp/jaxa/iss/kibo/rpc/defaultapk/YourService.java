@@ -35,7 +35,8 @@ public class YourService extends KiboRpcService {
     @Override
     protected void runPlan1(){
         itemDetectorUtils = new ItemDetectorUtils(getApplicationContext());
-        Thread visionThread = new Thread(new Vision());
+        Vision vision = new Vision();
+        Thread visionThread = new Thread(vision);
         api.startMission();
         api.flashlightControlBack(0.05f);
         api.flashlightControlFront(0.05f);
@@ -55,7 +56,17 @@ public class YourService extends KiboRpcService {
         moveToWithRetry(Area4,1);
         moveToWithRetry(end, 1);
         moveToWithRetry(astronautPQ,1);
-        visionThread.interrupt();
+//        visionThread.interrupt();
+
+        // Using custom stopping method instead of interrupting it, to avoid scan missing of the
+        // last area.
+        vision.stopRunning();
+        try{
+            visionThread.join();
+        } catch(InterruptedException e){
+            Thread.currentThread().interrupt();
+        }
+
         reportAreaInfoAndEndRounding();
         api.notifyRecognitionItem();
         String targetItem = recognizeTargetItem();
@@ -65,6 +76,11 @@ public class YourService extends KiboRpcService {
 
     class Vision implements Runnable {
         private ExecutorService executorService = Executors.newSingleThreadExecutor();
+        private volatile boolean running = true;
+
+        public void stopRunning(){
+            running = false;
+        }
 
         @Override
         public void run() {
@@ -113,6 +129,14 @@ public class YourService extends KiboRpcService {
                 }
             }
             executorService.shutdown();
+            // Wait for mission complete and close executorService correctly
+            try {
+                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)){
+                    executorService.shutdownNow();
+                }
+            } catch (InterruptedException e){
+                executorService.shutdownNow();
+            }
         }
     }
 
