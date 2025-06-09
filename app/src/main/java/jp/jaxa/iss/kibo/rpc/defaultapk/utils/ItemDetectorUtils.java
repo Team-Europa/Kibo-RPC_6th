@@ -199,4 +199,9 @@ public class ItemDetectorUtils {
         }
         return resultList.toArray(new DetectionResult[0]);
     }
+
+    public int getScanCountForArea(Integer areaNum) {
+        List<Pair<String, Integer>> list = areaLandmarkDatas.get(areaNum);
+        return list != null ? list.size() : 0;
+    }
 }

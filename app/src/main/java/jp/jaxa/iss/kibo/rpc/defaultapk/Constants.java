@@ -15,29 +15,12 @@ public class Constants {
 
     static final int visionThread_stoppingLatency = 20;
 
-//    static final PointWithQuaternion point1_1 = new PointWithQuaternion(new Point(10.425, -9.475,4.445), new Quaternion(0f, 0f, 0.707f, 0.707f));
-//    static final PointWithQuaternion point1_2 = new PointWithQuaternion(new Point(11.425, -9.475,5.4), new Quaternion(0f, 0f, 0.707f, 0.707f));
-//    static final PointWithQuaternion point2 = new PointWithQuaternion(new Point(11.425, -9.5, 5.4), new Quaternion(0f, 0f, 0.707f, 0.707f));
-//    static final PointWithQuaternion point2_2 = new PointWithQuaternion(new Point(10.925 , -8.45, 5.4), new Quaternion(0f, 0f, 0.707f, 0.707f));
-//    static final PointWithQuaternion point3_1 = new PointWithQuaternion(new Point(10.425, -7.5, 5.4), new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
-//    static final PointWithQuaternion point3 = new PointWithQuaternion(new Point(10.425, -7.5, 5.4), new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
-//    static final PointWithQuaternion point4_1 = new PointWithQuaternion(new Point(11.375, -7.3, 4.425), new Quaternion(0f,0f,-1f,0f));
-//    static final PointWithQuaternion point4_2 = new PointWithQuaternion(new Point(11.375, -6.35, 4.945), new Quaternion(0f,0f,-1f,0f));
+    static final PointWithQuaternion point1_1 = new PointWithQuaternion(new Point(10.5, -9.45,4.5), new Quaternion(0f, 0f, 0.707f, 0.707f));
+    static final PointWithQuaternion point1_2 = new PointWithQuaternion(new Point(11.4, -9.4,4.9), new Quaternion(0f, 0f, 0.707f, 0.707f));
+    static final PointWithQuaternion point2 = new PointWithQuaternion(new Point(10.925, -9.5, 4.575), new Quaternion(0.5f, 0.5f, -0.5f, 0.5f));
+    static final PointWithQuaternion point3 = new PointWithQuaternion(new Point(10.925, -7.75, 4.575), new Quaternion(0.5f, 0.5f, -0.5f, 0.5f));
+    static final PointWithQuaternion point4_1 = new PointWithQuaternion(new Point(10.725, -7.35, 4.8), new Quaternion(0f,0f,-1f,0f));
 
-//    // case 1: with 1 area more oasis
-//    static final PointWithQuaternion init = new PointWithQuaternion(new Point(10.5, -9.40, 4.45), new Quaternion(0f, 0f, 0.707f, 0.707f));
-//    static final PointWithQuaternion Area1 = new PointWithQuaternion(new Point(11.40, -9.40, 4.90), new Quaternion(0f, 0f, 0.707f, 0.707f));
-//    static final PointWithQuaternion Area2 = new PointWithQuaternion(new Point(11.40, -9.30, 5.25), new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
-//    static final PointWithQuaternion Area3 = new PointWithQuaternion(new Point(10.45,-7.45,5.25), new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
-//    static final PointWithQuaternion Area4 = new PointWithQuaternion(new Point(11.40,-7.35,4.90), new Quaternion(0f,0f,-1f,0f));
-//    static final PointWithQuaternion end = new PointWithQuaternion(new Point(11.40, -6.30,4.45), new Quaternion(0f,0f,-1f,0f));
-////    static final PointWithQuaternion end2 = new PointWithQuaternion(new Point(11.40, -6.85,4.90), new Quaternion(0f,0f,-1f,0f));
-
-    // case 2: fastest with Oasis consideration
-    static final PointWithQuaternion Area1 = new PointWithQuaternion(new Point(10.45, -9.55, 4.90), new Quaternion(0f, 0f, 0.707f, 0.707f));
-    static final PointWithQuaternion Area2 = new PointWithQuaternion(new Point(11.40, -9.45, 5.40), new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
-    static final PointWithQuaternion Area3 = new PointWithQuaternion(new Point(10.70, -7.95, 5.40), new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
-    static final PointWithQuaternion Area4 = new PointWithQuaternion(new Point(11.40, -6.90, 4.90), new Quaternion(0f,0f,-1f,0f));
     static final Double[] navCamDistFromCenter = {-0.0422, -0.0826, 0.1177};
     static final Double[] dockCamDistFromCenter = {-0.054, -0.0064, 0.1061};
 
