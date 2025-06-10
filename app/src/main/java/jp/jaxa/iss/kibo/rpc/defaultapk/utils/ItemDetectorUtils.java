@@ -172,7 +172,7 @@ public class ItemDetectorUtils {
     }
 
     public void scanItemBoard(Mat mat, Integer areaNum){
-        DetectionResult[] detectionResults = onnxDetect.detect(mat,0.5f);
+        DetectionResult[] detectionResults = onnxDetect.detect(mat,0.775f);
 
         DetectionResult[] treasureResults = reMappingTreasureData(detectionResults);
         detectTreasureItem(treasureResults, areaNum);

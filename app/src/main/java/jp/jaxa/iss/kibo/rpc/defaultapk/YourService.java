@@ -60,8 +60,6 @@ public class YourService extends KiboRpcService {
         moveToWithRetry(point1_1, 1);
         moveToWithRetry(point1_2, 1);
         moveToWithRetry(point2,1);
-        moveToWithRetry(point2_2,1);
-        moveToWithRetry(point3_1,1);
         moveToWithRetry(point3,1);
         moveToWithRetry(point4_1,1);
         moveToWithRetry(astronautPQ,1);
@@ -209,7 +207,7 @@ public class YourService extends KiboRpcService {
                 double tx = tvecArray[0];
                 double ty = tvecArray[1];
                 double tz = tvecArray[2];
-                Point arucoWorldPos = QuaternionUtils.getAbsolutePointByPQ(tx + camParameter.tx, ty + camParameter.ty, tz + camParameter.tz, point, camQuaternion);
+                Point arucoWorldPos = QuaternionUtils.getAbsolutePointByPQ(tx + camParameter.tx, ty - camParameter.ty, tz - camParameter.tz, point, camQuaternion);
 
                 Log.i("arucoWorldPos",id + ":  "+ arucoWorldPos);
                 Log.i("robotPos",point + "//"+ camQuaternion);
@@ -312,7 +310,7 @@ public class YourService extends KiboRpcService {
         }
 
         Point robotPos = api.getRobotKinematics().getPosition();
-        SystemClock.sleep(3500);
+        SystemClock.sleep(3000);
         Point error = calcArucoPos(ImageProcessUtils.calibCamImg(api.getMatNavCam(), navCamParameter), areaNum);
         if(error != null){
             if(areaNum == 2||areaNum == 3){
