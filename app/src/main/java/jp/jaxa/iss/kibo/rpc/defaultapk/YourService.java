@@ -1,5 +1,6 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk;
 
+import android.graphics.Bitmap;
 import android.os.SystemClock;
 import android.util.Log;
 import android.util.Pair;
@@ -24,6 +25,7 @@ import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ImageProcessUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.model.PointWithQuaternion;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ItemDetectorUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils;
+import jp.jaxa.iss.kibo.rpc.defaultapk.utils.YoloDetectorUtils;
 
 import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
 
@@ -31,6 +33,7 @@ public class YourService extends KiboRpcService {
     private CamParameter navCamParameter = new CamParameter();
     private CamParameter dockCamParameter = new CamParameter();
     private ItemDetectorUtils itemDetectorUtils;
+    private YoloDetectorUtils yoloDetectorUtils;
     private Vision vision;
 
     private final PriorityBlockingQueue<ScanTask> scanTaskQueue =
@@ -46,6 +49,7 @@ public class YourService extends KiboRpcService {
     @Override
     protected void runPlan1(){
         itemDetectorUtils = new ItemDetectorUtils(getApplicationContext());
+        yoloDetectorUtils = new YoloDetectorUtils(getAssets());
         vision = new Vision();
         Thread visionThread = new Thread(vision);
 
@@ -56,12 +60,14 @@ public class YourService extends KiboRpcService {
 
         visionThread.start();
 
-        moveToWithRetry(point1_1,1);
-        moveToWithRetry(point1_2,1);
+        moveToWithRetry(point1_1, 1);
+        moveToWithRetry(point1_2, 1);
         moveToWithRetry(point2,1);
+        moveToWithRetry(point2_2,1);
+        moveToWithRetry(point3_1,1);
         moveToWithRetry(point3,1);
         moveToWithRetry(point4_1,1);
-        moveToWithRetry(astronautPQ,10);
+        moveToWithRetry(astronautPQ,1);
 
         vision.stopRunning();
         try{
@@ -281,7 +287,8 @@ public class YourService extends KiboRpcService {
                     Mat tvec = tvecs.row(i);
 
                     Mat recognizeItemBoardImg = ImageProcessUtils.getWarpItemImg(img, rvec, tvec, navCamParameter.arUcoCalibCamMatrix, navCamParameter.zeroDoubleDistCoeffs);
-                    String targetItem = itemDetectorUtils.detectRecognizedResult(recognizeItemBoardImg);
+                    Bitmap recognizeItemBoardBitmap = ImageProcessUtils.getBitmapFromMat(recognizeItemBoardImg);
+                    String targetItem = yoloDetectorUtils.detectRecognizedResult(recognizeItemBoardBitmap);
                     if(targetItem != null){ return targetItem; }
                 }
             }

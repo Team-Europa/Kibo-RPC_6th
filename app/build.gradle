@@ -17,6 +17,13 @@ android {
             abiFilters 'arm64-v8a', 'x86_64'
         }
     }
+    externalNativeBuild {
+        cmake {
+            version "3.10.2"
+            path file('src/main/jni/CMakeLists.txt')
+            ndkVersion '21.3.6528147'
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false

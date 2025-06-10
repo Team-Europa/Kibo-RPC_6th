@@ -1,5 +1,8 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk.utils;
 
+import android.graphics.Bitmap;
+
+import org.opencv.android.Utils;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -73,5 +76,12 @@ public class ImageProcessUtils {
         Mat transformationMatrix = Imgproc.getPerspectiveTransform(itemBoardImagePoints, dstPoints);
         Imgproc.warpPerspective(originImg, frontView, transformationMatrix, frontView.size());
         return frontView;
+    }
+
+    public static Bitmap getBitmapFromMat(Mat mat){
+        Imgproc.cvtColor(mat, mat, Imgproc.COLOR_GRAY2RGBA);
+        Bitmap bitmap = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(mat, bitmap);
+        return bitmap;
     }
 }
