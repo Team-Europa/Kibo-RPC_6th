@@ -25,7 +25,6 @@ import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ImageProcessUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.model.PointWithQuaternion;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ItemDetectorUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils;
-import jp.jaxa.iss.kibo.rpc.defaultapk.utils.YoloDetectorUtils;
 
 import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
 
@@ -33,7 +32,6 @@ public class YourService extends KiboRpcService {
     private CamParameter navCamParameter = new CamParameter();
     private CamParameter dockCamParameter = new CamParameter();
     private ItemDetectorUtils itemDetectorUtils;
-    private YoloDetectorUtils yoloDetectorUtils;
     private Vision vision;
 
     private final PriorityBlockingQueue<ScanTask> scanTaskQueue =
@@ -49,7 +47,6 @@ public class YourService extends KiboRpcService {
     @Override
     protected void runPlan1(){
         itemDetectorUtils = new ItemDetectorUtils(getApplicationContext());
-        yoloDetectorUtils = new YoloDetectorUtils(getAssets());
         vision = new Vision();
         Thread visionThread = new Thread(vision);
 
@@ -288,7 +285,7 @@ public class YourService extends KiboRpcService {
 
                     Mat recognizeItemBoardImg = ImageProcessUtils.getWarpItemImg(img, rvec, tvec, navCamParameter.arUcoCalibCamMatrix, navCamParameter.zeroDoubleDistCoeffs);
                     Bitmap recognizeItemBoardBitmap = ImageProcessUtils.getBitmapFromMat(recognizeItemBoardImg);
-                    String targetItem = yoloDetectorUtils.detectRecognizedResult(recognizeItemBoardBitmap);
+                    String targetItem = itemDetectorUtils.detectRecognizedResult(recognizeItemBoardBitmap);
                     if(targetItem != null){ return targetItem; }
                 }
             }

@@ -1,6 +1,8 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk.utils;
 
 import android.content.Context;
+import android.content.res.AssetManager;
+import android.graphics.Bitmap;
 import android.util.Log;
 import android.util.Pair;
 
@@ -8,12 +10,15 @@ import org.opencv.core.Mat;
 
 import java.util.*;
 
+import jp.jaxa.iss.kibo.rpc.defaultapk.YOLO11Ncnn;
 import jp.jaxa.iss.kibo.rpc.defaultapk.model.DetectionResult;
 
 import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
 
 public class ItemDetectorUtils {
     private ONNXDetect onnxDetect;
+    private YOLO11Ncnn yolo11Ncnn = new YOLO11Ncnn();
+    private AssetManager assetManager;
 
     private static final String[] treasure_items = {"crystal", "diamond", "emerald"};
     private static final String[] landmark_items = {
@@ -25,6 +30,7 @@ public class ItemDetectorUtils {
 
     public ItemDetectorUtils(Context context) {
         onnxDetect = new ONNXDetect(context);
+        this.assetManager = context.getAssets();
     }
 
     private void detectTreasureItem(DetectionResult[] treasureDetectionResults, Integer areaNum){
@@ -85,9 +91,9 @@ public class ItemDetectorUtils {
         putVisionData(areaNum, new Pair<>(highestProbLabel, highestScoreLabelCount));
     }
 
-    public String detectRecognizedResult(Mat mat){
-        DetectionResult[] detectionResults = onnxDetect.detect(mat,0.5f);
-        DetectionResult result = reMappingTreasureData(detectionResults)[0];
+    public String detectRecognizedResult(Bitmap bitmap){
+        yolo11Ncnn.loadModel(assetManager, 0, 3, 0);
+        DetectionResult result = yolo11Ncnn.detectObjects(bitmap)[0];
         if(result !=null){ return  treasure_items[result.label]; }
         return null;
     }
