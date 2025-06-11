@@ -1,9 +1,14 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk.utils;
 
+import android.util.Pair;
+
 import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
+import org.opencv.core.Mat;
 
 public class QuaternionUtils {
+
+    public enum Axis { X, Y, Z }
 
     public static double calculateAngle(Quaternion q1, Quaternion q2) {
         double dotProduct = q1.getW() * q2.getW() + q1.getX() * q2.getX() + q1.getY() * q2.getY() + q1.getZ() * q2.getZ();
@@ -22,9 +27,7 @@ public class QuaternionUtils {
     }
 
     public static Point getAbsolutePointByPQ(Double tx, Double ty, Double tz, Point localOrigin, Quaternion orientation) {
-        // Rotation matrix converting
         double[][] R = quaternionToRotationMatrix(orientation);
-        // Rotating and transforming
         double[] localOriginMatrix = {localOrigin.getX(), localOrigin.getY(), localOrigin.getZ()};
         double[] localPositionMatrix = {tx, -ty, tz};
         double[] globalPosition = new double[3];
@@ -40,4 +43,64 @@ public class QuaternionUtils {
     public static Quaternion quaternionConjugate(Quaternion quaternion) {
         return new Quaternion(quaternion.getW(), -quaternion.getX(), -quaternion.getY(), -quaternion.getZ());
     }
+
+    public static Point solveWorldPositionWithFixedAxis(
+            Mat tvec,
+            Point robotPosition,
+            Quaternion robotOrientation,
+            Pair<Axis, Double> axisfixConfig,
+            Double[] camOffsetFromCenter
+    ) {
+        Axis axis = axisfixConfig.first;
+        Double fixedValue = axisfixConfig.second;
+
+        Point cameraWorldPos = getAbsolutePointByPQ(
+                camOffsetFromCenter[0],
+                camOffsetFromCenter[1],
+                camOffsetFromCenter[2],
+                robotPosition,
+                robotOrientation
+        );
+
+        double[] tvecArr = new double[3];
+        tvec.get(0, 0, tvecArr);
+        double tx = tvecArr[2];       // camera z → robot x
+        double ty = tvecArr[0];       // camera x → robot y
+        double tz = -tvecArr[1];
+
+        double[][] R = quaternionToRotationMatrix(robotOrientation);
+        double[] direction = new double[3];
+        double[] localVector = {tx, ty, tz};
+        for (int i = 0; i < 3; i++) {
+            direction[i] = 0;
+            for (int j = 0; j < 3; j++) {
+                direction[i] += R[i][j] * localVector[j];
+            }
+        }
+
+        double cx = cameraWorldPos.getX();
+        double cy = cameraWorldPos.getY();
+        double cz = cameraWorldPos.getZ();
+
+        double scale;
+        switch (axis) {
+            case X:
+                scale = (fixedValue - cx) / direction[0];
+                break;
+            case Y:
+                scale = (fixedValue - cy) / direction[1];
+                break;
+            case Z:
+            default:
+                scale = (fixedValue - cz) / direction[2];
+                break;
+        }
+
+        double wx = cx + scale * direction[0];
+        double wy = cy + scale * direction[1];
+        double wz = cz + scale * direction[2];
+
+        return new Point(wx, wy, wz);
+    }
+
 }

@@ -27,6 +27,7 @@ import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ItemDetectorUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils;
 
 import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils.Axis;
 
 public class YourService extends KiboRpcService {
     private CamParameter navCamParameter = new CamParameter();
@@ -57,11 +58,10 @@ public class YourService extends KiboRpcService {
 
         visionThread.start();
 
-        moveToWithRetry(point1_1, 1);
-        moveToWithRetry(point1_2, 1);
+        moveToWithRetry(point1, 1);
         moveToWithRetry(point2,1);
         moveToWithRetry(point3,1);
-        moveToWithRetry(point4_1,1);
+        moveToWithRetry(point4,1);
         moveToWithRetry(astronautPQ,1);
 
         vision.stopRunning();
@@ -120,8 +120,8 @@ public class YourService extends KiboRpcService {
             Mat dockImgPast = api.getMatDockCam();
 
             while (running && !Thread.currentThread().isInterrupted()) {
-                Mat navImgNow = api.getMatNavCam();
-                Mat dockImgNow = api.getMatDockCam();
+                final Mat navImgNow = api.getMatNavCam();
+                final Mat dockImgNow = api.getMatDockCam();
 
                 final Kinematics robotNowKinematics = api.getRobotKinematics();
                 long pastTime = System.currentTimeMillis();
@@ -134,7 +134,8 @@ public class YourService extends KiboRpcService {
                     executorService.submit(new Runnable() {
                         @Override
                         public void run() {
-                            scanItemFromMat(calibNavImg, navCamParameter, robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
+                            estimateAruco(navImgNow, dockCamParameter, robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
+                            scanItemFromMat(calibNavImg, navCamParameter);
                         }
                     });
                 }
@@ -147,7 +148,8 @@ public class YourService extends KiboRpcService {
                     executorService.submit(new Runnable() {
                         @Override
                         public void run() {
-                            scanItemFromMat(calibDockImg, dockCamParameter, robotNowKinematics.getPosition(), QuaternionUtils.quaternionConjugate(robotNowKinematics.getOrientation()));
+                            estimateAruco(dockImgNow, dockCamParameter, robotNowKinematics.getPosition(), QuaternionUtils.quaternionConjugate(robotNowKinematics.getOrientation()));
+                            scanItemFromMat(calibDockImg, dockCamParameter);
                         }
                     });
                 }
@@ -184,11 +186,11 @@ public class YourService extends KiboRpcService {
         dockCamParameter.initCamParameter(api.getDockCamIntrinsics(), dockCamDistFromCenter);
     }
 
-    private void scanItemFromMat(Mat img, CamParameter camParameter, Point point, Quaternion camQuaternion){
+    private void scanItemFromMat(Mat calibImg, CamParameter camParameter){
         List<Mat> arucoCorners = new ArrayList<>();
         Mat arucoIDs = new Mat();
 
-        Aruco.detectMarkers(img, Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250), arucoCorners, arucoIDs);
+        Aruco.detectMarkers(calibImg, Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250), arucoCorners, arucoIDs);
 
         if(!arucoIDs.empty()) {
             Mat rvecs = new Mat();
@@ -201,17 +203,7 @@ public class YourService extends KiboRpcService {
                 Mat rvec = rvecs.row(i);
                 Mat tvec = tvecs.row(i);
 
-                Mat lostItemBoardImg = ImageProcessUtils.getWarpItemImg(img, rvec, tvec, camParameter.arUcoCalibCamMatrix, camParameter.zeroDoubleDistCoeffs);
-
-                double[] tvecArray = tvec.get(0, 0);
-                double tx = tvecArray[0];
-                double ty = tvecArray[1];
-                double tz = tvecArray[2];
-                Point arucoWorldPos = QuaternionUtils.getAbsolutePointByPQ(tx + camParameter.tx, ty - camParameter.ty, tz - camParameter.tz, point, camQuaternion);
-
-                Log.i("arucoWorldPos",id + ":  "+ arucoWorldPos);
-                Log.i("robotPos",point + "//"+ camQuaternion);
-                Log.i("arucoRelativePos",id + ":  "+ tvecArray[0] + ","+ tvecArray[1] + ","+ tvecArray[2] + ",");
+                Mat lostItemBoardImg = ImageProcessUtils.getWarpItemImg(calibImg, rvec, tvec, camParameter.arUcoCalibCamMatrix, camParameter.zeroDoubleDistCoeffs);
 
                 if(lostItemBoardImg != null){
                     api.saveMatImage(lostItemBoardImg,"image_" + saveImgNum + ".png");
@@ -225,6 +217,42 @@ public class YourService extends KiboRpcService {
                 } else {
                     Log.i("lostItemBoardImg","lostItemBoardImg is null");
                 }
+            }
+        }
+    }
+
+    private void estimateAruco(Mat img, CamParameter camParameter, Point robotPosition, Quaternion camQuaternion){
+        List<Mat> arucoCorners = new ArrayList<>();
+        Mat arucoIDs = new Mat();
+
+        Aruco.detectMarkers(img, Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250), arucoCorners, arucoIDs);
+
+        if(!arucoIDs.empty()) {
+            Mat rvecs = new Mat();
+            Mat tvecs = new Mat();
+            Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, camParameter.camMatrix, camParameter.camDistCoeffs, rvecs, tvecs);
+
+            for (int i = 0; i < arucoIDs.rows(); i++) {
+                int id = (int) arucoIDs.get(i, 0)[0]-100;
+                if (id < 1 || id > 4) { continue; }
+                Mat tvec = tvecs.row(i);
+
+                Pair<QuaternionUtils.Axis, Double> arucoPosFixAxisConst = null;
+
+                if (id == 2 || id == 3) {
+                    arucoPosFixAxisConst = new Pair<>(QuaternionUtils.Axis.Z, 3.76203);
+                } else if (id == 1) {
+                    arucoPosFixAxisConst = new Pair<>(QuaternionUtils.Axis.Y, -10.58);
+                } else {
+                    arucoPosFixAxisConst = new Pair<>(Axis.X, 9.866984);
+                }
+
+                Point arucoWorldPos = QuaternionUtils.solveWorldPositionWithFixedAxis(tvec, robotPosition, camQuaternion,arucoPosFixAxisConst, camParameter.offSetCenter);
+
+                double[] tvecArray = tvec.get(0, 0);
+                Log.i("arucoWorldPos",id + ":  "+ arucoWorldPos);
+                Log.i("robotPos",robotPosition + "//"+ camQuaternion);
+                Log.i("arucoRelativePos",id + ":  "+ tvecArray[0] + ","+ tvecArray[1] + ","+ tvecArray[2] + ",");
             }
         }
     }
@@ -310,7 +338,7 @@ public class YourService extends KiboRpcService {
         }
 
         Point robotPos = api.getRobotKinematics().getPosition();
-        SystemClock.sleep(3000);
+        SystemClock.sleep(3500);
         Point error = calcArucoPos(ImageProcessUtils.calibCamImg(api.getMatNavCam(), navCamParameter), areaNum);
         if(error != null){
             if(areaNum == 2||areaNum == 3){

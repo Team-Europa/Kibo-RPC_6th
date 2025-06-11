@@ -7,21 +7,17 @@ import org.opencv.core.Scalar;
 
 
 public class CamParameter {
-    Mat camMatrix;
-    Mat camDistCoeffs;
+    public Mat camMatrix;
+    public Mat camDistCoeffs;
     private double[][] camIntrinsicsMatrix;
-    public double tx;
-    public double ty;
-    public double tz;
+    public Double[] offSetCenter;
     public Mat zeroDistCoeffs;
     public MatOfDouble zeroDoubleDistCoeffs;
     public Mat arUcoCalibCamMatrix;
 
-    public void initCamParameter(double[][] camIntrinsicsMatrix, Double[] distFromCenter) {
+    public void initCamParameter(double[][] camIntrinsicsMatrix, Double[] offSetCenter) {
         this.camIntrinsicsMatrix = camIntrinsicsMatrix;
-        tx = distFromCenter[0];
-        ty = distFromCenter[1];
-        tz = distFromCenter[2];
+        this.offSetCenter = offSetCenter;
 
         camMatrix = new Mat(3, 3 , CvType.CV_64F);
         camDistCoeffs = new Mat(1 , 5 , CvType.CV_64F);
