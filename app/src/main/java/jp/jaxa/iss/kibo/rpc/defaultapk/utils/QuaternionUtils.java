@@ -54,6 +54,7 @@ public class QuaternionUtils {
         Axis axis = axisfixConfig.first;
         Double fixedValue = axisfixConfig.second;
 
+        // Compute camera position in world coordinates
         Point cameraWorldPos = getAbsolutePointByPQ(
                 camOffsetFromCenter[0],
                 camOffsetFromCenter[1],
@@ -62,45 +63,113 @@ public class QuaternionUtils {
                 robotOrientation
         );
 
+        // Extract the translation vector from OpenCV (camera frame → robot frame)
         double[] tvecArr = new double[3];
         tvec.get(0, 0, tvecArr);
-        double tx = tvecArr[2];       // camera z → robot x
-        double ty = tvecArr[0];       // camera x → robot y
-        double tz = -tvecArr[1];
+        double[] localVec = new double[]{tvecArr[2], tvecArr[0], -tvecArr[1]}; // camera z → robot x, camera x → robot y, y flipped
 
+        // Convert direction to world coordinates using rotation matrix
         double[][] R = quaternionToRotationMatrix(robotOrientation);
         double[] direction = new double[3];
-        double[] localVector = {tx, ty, tz};
         for (int i = 0; i < 3; i++) {
             direction[i] = 0;
             for (int j = 0; j < 3; j++) {
-                direction[i] += R[i][j] * localVector[j];
+                direction[i] += R[i][j] * localVec[j];
             }
         }
+
+        // Normalize direction vector
+        double dirNorm = Math.sqrt(direction[0]*direction[0] + direction[1]*direction[1] + direction[2]*direction[2]);
+        for (int i = 0; i < 3; i++) direction[i] /= dirNorm;
 
         double cx = cameraWorldPos.getX();
         double cy = cameraWorldPos.getY();
         double cz = cameraWorldPos.getZ();
 
+        // Estimate initial guess using simple intersection with fixed axis plane
+        double px, py, pz;
         double scale;
         switch (axis) {
             case X:
                 scale = (fixedValue - cx) / direction[0];
+                px = fixedValue;
+                py = cy + scale * direction[1];
+                pz = cz + scale * direction[2];
                 break;
             case Y:
                 scale = (fixedValue - cy) / direction[1];
+                px = cx + scale * direction[0];
+                py = fixedValue;
+                pz = cz + scale * direction[2];
                 break;
             case Z:
             default:
                 scale = (fixedValue - cz) / direction[2];
+                px = cx + scale * direction[0];
+                py = cy + scale * direction[1];
+                pz = fixedValue;
                 break;
         }
 
-        double wx = cx + scale * direction[0];
-        double wy = cy + scale * direction[1];
-        double wz = cz + scale * direction[2];
+        // Gradient descent parameters
+        double lr = 0.01;     // learning rate
+        int maxIter = 100;
+        double prevLoss = Double.MAX_VALUE;
 
-        return new Point(wx, wy, wz);
+        for (int iter = 0; iter < maxIter; iter++) {
+            // Current direction from camera to point
+            double dx = px - cx;
+            double dy = py - cy;
+            double dz = pz - cz;
+            double norm = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            dx /= norm;
+            dy /= norm;
+            dz /= norm;
+
+            // Loss: 1 - dot product (we want vectors to align)
+            double dot = dx * direction[0] + dy * direction[1] + dz * direction[2];
+            double loss = 1 - dot;
+
+            // Numerical gradient (finite difference)
+            double delta = 1e-4;
+            double gradX = 0, gradY = 0;
+
+            if (axis == Axis.X) {
+                gradY = (lossAt(fixedValue, py + delta, pz, cx, cy, cz, direction) - loss) / delta;
+                double gradZ = (lossAt(fixedValue, py, pz + delta, cx, cy, cz, direction) - loss) / delta;
+                py -= lr * gradY;
+                pz -= lr * gradZ;
+            } else if (axis == Axis.Y) {
+                gradX = (lossAt(px + delta, fixedValue, pz, cx, cy, cz, direction) - loss) / delta;
+                double gradZ = (lossAt(px, fixedValue, pz + delta, cx, cy, cz, direction) - loss) / delta;
+                px -= lr * gradX;
+                pz -= lr * gradZ;
+            } else {
+                gradX = (lossAt(px + delta, py, fixedValue, cx, cy, cz, direction) - loss) / delta;
+                gradY = (lossAt(px, py + delta, fixedValue, cx, cy, cz, direction) - loss) / delta;
+                px -= lr * gradX;
+                py -= lr * gradY;
+            }
+
+            // Early stopping
+            if (Math.abs(prevLoss - loss) < 1e-6) break;
+            prevLoss = loss;
+        }
+
+        return new Point(px, py, pz);
+    }
+
+    // Loss function: 1 - cosine similarity between estimated and target direction
+    private static double lossAt(double x, double y, double z, double cx, double cy, double cz, double[] targetDir) {
+        double dx = x - cx;
+        double dy = y - cy;
+        double dz = z - cz;
+        double norm = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        dx /= norm;
+        dy /= norm;
+        dz /= norm;
+        double dot = dx * targetDir[0] + dy * targetDir[1] + dz * targetDir[2];
+        return 1 - dot;
     }
 
 }
