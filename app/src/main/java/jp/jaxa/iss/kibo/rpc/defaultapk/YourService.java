@@ -60,7 +60,9 @@ public class YourService extends KiboRpcService {
 
         moveToWithRetry(point1, 1);
         moveToWithRetry(point2,1);
+//        moveToWithRetry(point23, 1);
         moveToWithRetry(point3,1);
+        moveToWithRetry(point34, 1);
         moveToWithRetry(point4,1);
         moveToWithRetry(astronautPQ,1);
 
