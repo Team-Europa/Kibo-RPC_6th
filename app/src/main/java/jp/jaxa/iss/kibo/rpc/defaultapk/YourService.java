@@ -1,6 +1,8 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk;
 
 import android.graphics.Bitmap;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 import android.util.Pair;
@@ -48,36 +50,69 @@ public class YourService extends KiboRpcService {
     @Override
     protected void runPlan1(){
         itemDetectorUtils = new ItemDetectorUtils(getApplicationContext());
-        vision = new Vision();
-        Thread visionThread = new Thread(vision);
+//        Vision vision = new Vision();
+//        Thread visionThread = new Thread(vision);
+//        Handler handler = new Handler(Looper.getMainLooper());
 
         api.startMission();
         api.flashlightControlBack(0.05f);
         api.flashlightControlFront(0.05f);
         initCamParameter();
 
-        visionThread.start();
-
-        moveToWithRetry(point1, 1);
-        moveToWithRetry(point2,1);
-//        moveToWithRetry(point23, 1);
-        moveToWithRetry(point3,1);
-        moveToWithRetry(point34, 1);
-        moveToWithRetry(point4,1);
-        moveToWithRetry(astronautPQ,1);
-
-        vision.stopRunning();
-        try{
-            visionThread.join();
-        } catch(InterruptedException e){
-            Thread.currentThread().interrupt();
+        for (int area = 1; area <= 4; area++){
+            vision = new Vision();
+            goTo(area);
+            vision.run();
+//            handler.postDelayed(new Runnable() {
+//                @Override
+//                public void run() {
+//                    vision.stopRunning();
+//                }
+//            }, 3500);
         }
 
+//        visionThread.start();
+
+//        moveToWithRetry(point1, 1);
+//        moveToWithRetry(point2,1);
+////        moveToWithRetry(point23, 1);
+//        moveToWithRetry(point3,1);
+//        moveToWithRetry(point34, 1);
+//        moveToWithRetry(point4,1);
+
+
+//        vision.stopRunning();
+//        try{
+//            visionThread.join();
+//        } catch(InterruptedException e){
+//            Thread.currentThread().interrupt();
+//        }
+
+        moveToWithRetry(astronautPQ,1);
         reportAreaInfoAndEndRounding();
         api.notifyRecognitionItem();
         String targetItem = recognizeTargetItem();
         endGameTask(itemDetectorUtils.getTargetArea(targetItem));
         api.shutdownFactory();
+    }
+
+    private void goTo(int area){
+        switch(area){
+            case 1:
+                moveToWithRetry(area1, 1);
+                break;
+            case 2:
+                moveToWithRetry(area2, 1);
+                break;
+            case 3:
+                moveToWithRetry(area3, 1);
+                break;
+            case 4:
+                moveToWithRetry(area4, 1);
+                break;
+            default:
+                Log.e("GoTo", "ERROR: Invalid area.");
+        }
     }
 
     private class ScanTask {
@@ -108,9 +143,9 @@ public class YourService extends KiboRpcService {
         private ExecutorService executorService = Executors.newSingleThreadExecutor();
         private volatile boolean running = true;
 
-        public void stopRunning(){
-            running = false;
-        }
+//        public void stopRunning(){
+//            running = false;
+//        }
 
         public boolean isRunning() {
             return running;
@@ -118,10 +153,13 @@ public class YourService extends KiboRpcService {
 
         @Override
         public void run() {
+            scanTaskQueue.clear();
             Mat navImgPast = api.getMatNavCam();
             Mat dockImgPast = api.getMatDockCam();
+            long startTime = System.currentTimeMillis();
 
-            while (running && !Thread.currentThread().isInterrupted()) {
+          while (System.currentTimeMillis() - startTime < scanning_duration_millis) {
+
                 final Mat navImgNow = api.getMatNavCam();
                 final Mat dockImgNow = api.getMatDockCam();
 
@@ -171,7 +209,7 @@ public class YourService extends KiboRpcService {
                     break;
                 }
             }
-
+            running = false;
             executorService.shutdown();
             try {
                 if (!executorService.awaitTermination(visionThread_stoppingLatency, TimeUnit.SECONDS)){

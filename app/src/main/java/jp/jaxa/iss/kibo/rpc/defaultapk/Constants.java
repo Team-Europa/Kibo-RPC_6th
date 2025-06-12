@@ -14,30 +14,48 @@ public class Constants {
                     new Quaternion(0f, 0f, 0.707f, 0.707f));
 
     static final int visionThread_stoppingLatency = 20;
+    static final long scanning_duration_millis = 3500;
 
-    static final PointWithQuaternion point1 = new PointWithQuaternion(
-            new Point(10.425, -9.545,4.445),
+//    static final PointWithQuaternion point1 = new PointWithQuaternion(
+//            new Point(10.425, -9.545,4.445),
+//            new Quaternion(0f, 0f, 0.707f, 0.707f));
+//
+//    static final PointWithQuaternion point2 = new PointWithQuaternion(
+//            new Point(11.425, -9.455,5.4),
+//            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f));
+//
+////    static final PointWithQuaternion point23 = new PointWithQuaternion(
+////            new Point(10.9, -8.445, 5.4),
+////            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f)
+////    );
+//
+//    static final PointWithQuaternion point3 = new PointWithQuaternion(
+//            new Point(10.375, -7.445,5.4),
+//            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f));
+//
+//    static final PointWithQuaternion point34 = new PointWithQuaternion(
+//            new Point(10.925, -7.45, 4.90),
+//            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f));
+//
+//    static final PointWithQuaternion point4 = new PointWithQuaternion(
+//            new Point(11.143, -6.6707, 4.90),
+//            new Quaternion(0f,0f,-1f,0f));
+
+    // TODO: Area 1 and Area 4 is miss-scanned
+    static final PointWithQuaternion area1 = new PointWithQuaternion(
+            new Point(11.415, -9.525,4.900),
             new Quaternion(0f, 0f, 0.707f, 0.707f));
 
-    static final PointWithQuaternion point2 = new PointWithQuaternion(
-            new Point(11.425, -9.455,5.4),
-            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f));
+    static final PointWithQuaternion area2 = new PointWithQuaternion(
+            new Point(11.175, -8.975,5.420),
+            new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
 
-//    static final PointWithQuaternion point23 = new PointWithQuaternion(
-//            new Point(10.9, -8.445, 5.4),
-//            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f)
-//    );
+    static final PointWithQuaternion area3 = new PointWithQuaternion(
+            new Point(10.700, -7.925,5.420),
+            new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
 
-    static final PointWithQuaternion point3 = new PointWithQuaternion(
-            new Point(10.375, -7.445,5.4),
-            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f));
-
-    static final PointWithQuaternion point34 = new PointWithQuaternion(
-            new Point(10.925, -7.45, 4.90),
-            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f));
-
-    static final PointWithQuaternion point4 = new PointWithQuaternion(
-            new Point(11.143, -6.6707, 4.90),
+    static final PointWithQuaternion area4 = new PointWithQuaternion(
+            new Point(11.410, -6.875,4.925),
             new Quaternion(0f,0f,-1f,0f));
 
     static final Double[] navCamDistFromCenter = {-0.0422, -0.0826, 0.1177};
