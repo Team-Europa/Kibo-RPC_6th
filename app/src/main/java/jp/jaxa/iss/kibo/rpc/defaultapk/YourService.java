@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import gov.nasa.arc.astrobee.Kinematics;
 import gov.nasa.arc.astrobee.Result;
@@ -59,17 +58,7 @@ public class YourService extends KiboRpcService {
         api.flashlightControlFront(0.05f);
         initCamParameter();
 
-        for (int area = 1; area <= 4; area++){
-            vision = new Vision();
-            goTo(area);
-            vision.run();
-//            handler.postDelayed(new Runnable() {
-//                @Override
-//                public void run() {
-//                    vision.stopRunning();
-//                }
-//            }, 3500);
-        }
+        startScan(1);
 
 //        visionThread.start();
 
@@ -94,6 +83,18 @@ public class YourService extends KiboRpcService {
         String targetItem = recognizeTargetItem();
         endGameTask(itemDetectorUtils.getTargetArea(targetItem));
         api.shutdownFactory();
+    }
+
+    private void startScan(int startArea){
+        final int targetArea = startArea;
+        vision = new Vision();
+        goTo(targetArea);
+        SystemClock.sleep(goToSleepMillis);
+        vision.run();
+        if (startArea < 4){
+            vision.stopRunning();
+            startScan(targetArea + 1);
+        }
     }
 
     private void goTo(int area){
@@ -143,10 +144,10 @@ public class YourService extends KiboRpcService {
         private ExecutorService executorService = Executors.newSingleThreadExecutor();
         private volatile boolean running = true;
 
-//        public void stopRunning(){
-//            running = false;
-//        }
-
+        public void stopRunning(){
+            running = false;
+        }
+//
         public boolean isRunning() {
             return running;
         }
@@ -154,71 +155,89 @@ public class YourService extends KiboRpcService {
         @Override
         public void run() {
             scanTaskQueue.clear();
-            Mat navImgPast = api.getMatNavCam();
+//            Mat navImgPast = api.getMatNavCam();
             Mat dockImgPast = api.getMatDockCam();
-            long startTime = System.currentTimeMillis();
+//            long startTime = System.currentTimeMillis();
 
-          while (System.currentTimeMillis() - startTime < scanning_duration_millis) {
+//          while (running && System.currentTimeMillis() - startTime < scanning_duration_millis) {
 
-                final Mat navImgNow = api.getMatNavCam();
-                final Mat dockImgNow = api.getMatDockCam();
+            final Mat navImgNow = api.getMatNavCam();
+            final Mat dockImgNow = api.getMatDockCam();
 
-                final Kinematics robotNowKinematics = api.getRobotKinematics();
-                long pastTime = System.currentTimeMillis();
+            final Kinematics robotNowKinematics = api.getRobotKinematics();
+            long pastTime = System.currentTimeMillis();
 
-                if (ImageProcessUtils.areImgDiff(navImgPast, navImgNow)) {
-                    navImgPast = navImgNow;
+//                if (ImageProcessUtils.areImgDiff(navImgPast, navImgNow)) {
+//                    navImgPast = navImgNow;
+//
+//                    final Mat calibNavImg = ImageProcessUtils.calibCamImg(navImgNow, navCamParameter);
+//
+//                    executorService.submit(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            estimateAruco(navImgNow, dockCamParameter, robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
+//                            scanItemFromMat(calibNavImg, navCamParameter);
+//                        }
+//                    });
+//                }
 
-                    final Mat calibNavImg = ImageProcessUtils.calibCamImg(navImgNow, navCamParameter);
+            final Mat calibNavImg = ImageProcessUtils.calibCamImg(navImgNow, navCamParameter);
+            estimateAruco(
+                    navImgNow,
+                    dockCamParameter,
+                    robotNowKinematics.getPosition(),
+                    robotNowKinematics.getOrientation()
+            );
+            scanItemFromMat(calibNavImg, navCamParameter);
 
-                    executorService.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            estimateAruco(navImgNow, dockCamParameter, robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
-                            scanItemFromMat(calibNavImg, navCamParameter);
-                        }
-                    });
-                }
+//                if (ImageProcessUtils.areImgDiff(dockImgPast, dockImgNow)) {
+//                    dockImgPast = dockImgNow;
+//
+//                    final Mat calibDockImg = ImageProcessUtils.calibCamImg(dockImgNow, dockCamParameter);
+//
+//                    executorService.submit(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            estimateAruco(dockImgNow, dockCamParameter, robotNowKinematics.getPosition(), QuaternionUtils.quaternionConjugate(robotNowKinematics.getOrientation()));
+//                            scanItemFromMat(calibDockImg, dockCamParameter);
+//                        }
+//                    });
+//                }
+            final Mat calibDockImg = ImageProcessUtils.calibCamImg(dockImgNow, dockCamParameter);
+            estimateAruco(
+                    dockImgNow,
+                    dockCamParameter,
+                    robotNowKinematics.getPosition(),
+                    QuaternionUtils.quaternionConjugate(robotNowKinematics.getOrientation())
+            );
+            scanItemFromMat(calibDockImg, dockCamParameter);
 
-                if (ImageProcessUtils.areImgDiff(dockImgPast, dockImgNow)) {
-                    dockImgPast = dockImgNow;
-
-                    final Mat calibDockImg = ImageProcessUtils.calibCamImg(dockImgNow, dockCamParameter);
-
-                    executorService.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            estimateAruco(dockImgNow, dockCamParameter, robotNowKinematics.getPosition(), QuaternionUtils.quaternionConjugate(robotNowKinematics.getOrientation()));
-                            scanItemFromMat(calibDockImg, dockCamParameter);
-                        }
-                    });
-                }
-
-                while (!scanTaskQueue.isEmpty()) {
-                    ScanTask task = scanTaskQueue.poll();
-                    if (task != null) {
-                        task.process();
-                    }
-                }
-
-                try {
-                    long processingTime = System.currentTimeMillis() - pastTime;
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
+            while (!scanTaskQueue.isEmpty()) {
+                ScanTask task = scanTaskQueue.poll();
+                if (task != null) task.process();
             }
-            running = false;
-            executorService.shutdown();
-            try {
-                if (!executorService.awaitTermination(visionThread_stoppingLatency, TimeUnit.SECONDS)){
-                    executorService.shutdownNow();
-                }
-            } catch (InterruptedException e){
-                executorService.shutdownNow();
-            }
+
+//                try {
+//                    long processingTime = System.currentTimeMillis() - pastTime;
+//                    Thread.sleep(100);
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                    break;
+//                }
+//            running = false;
         }
+//            running = false;
+//            executorService.shutdown();
+//            try {
+//                if (!executorService.awaitTermination(visionThread_stoppingLatency, TimeUnit.SECONDS)){
+//                    executorService.shutdownNow();
+//                }
+//            } catch (InterruptedException e){
+//                executorService.shutdownNow();
+//            }
+//        }
+
+
     }
 
     private void initCamParameter() {
