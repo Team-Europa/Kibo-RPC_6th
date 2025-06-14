@@ -13,35 +13,10 @@ public class Constants {
                     new Point(11.143, -6.6707, 4.9654),
                     new Quaternion(0f, 0f, 0.707f, 0.707f));
 
-//    static final int visionThread_stoppingLatency = 20;
-//    static final long scanning_duration_millis = 3500;
-    static final long goToSleepMillis = 1250; // TODO: Further test for min delay time.
+    static final int visionThread_stoppingLatency = 20;
+    static final long scanSleepMillis = 7500; // TODO: Further test for min delay time.
 
-//    static final PointWithQuaternion point1 = new PointWithQuaternion(
-//            new Point(10.425, -9.545,4.445),
-//            new Quaternion(0f, 0f, 0.707f, 0.707f));
-//
-//    static final PointWithQuaternion point2 = new PointWithQuaternion(
-//            new Point(11.425, -9.455,5.4),
-//            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f));
-//
-////    static final PointWithQuaternion point23 = new PointWithQuaternion(
-////            new Point(10.9, -8.445, 5.4),
-////            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f)
-////    );
-//
-//    static final PointWithQuaternion point3 = new PointWithQuaternion(
-//            new Point(10.375, -7.445,5.4),
-//            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f));
-//
-//    static final PointWithQuaternion point34 = new PointWithQuaternion(
-//            new Point(10.925, -7.45, 4.90),
-//            new Quaternion(0.5f, -0.5f, -0.5f, 0.5f));
-//
-//    static final PointWithQuaternion point4 = new PointWithQuaternion(
-//            new Point(11.143, -6.6707, 4.90),
-//            new Quaternion(0f,0f,-1f,0f));
-
+    public enum Cam {NAV, DOCK}
 
     static final PointWithQuaternion area1 = new PointWithQuaternion(
             new Point(10.925, -9.525,4.685),

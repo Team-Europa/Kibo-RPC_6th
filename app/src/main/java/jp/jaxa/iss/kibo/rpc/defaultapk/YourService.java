@@ -1,22 +1,25 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk;
 
 import android.graphics.Bitmap;
-import android.os.Handler;
-import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 import android.util.Pair;
 
 import org.opencv.aruco.Aruco;
+import org.opencv.aruco.DetectorParameters;
+import org.opencv.aruco.Dictionary;
 import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
+
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
-import gov.nasa.arc.astrobee.Kinematics;
 import gov.nasa.arc.astrobee.Result;
 import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
@@ -28,13 +31,15 @@ import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ItemDetectorUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils;
 
 import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils.Axis;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils.quaternionConjugate;
 
 public class YourService extends KiboRpcService {
     private CamParameter navCamParameter = new CamParameter();
     private CamParameter dockCamParameter = new CamParameter();
     private ItemDetectorUtils itemDetectorUtils;
+    private QuaternionUtils quaternionUtils;
     private Vision vision;
+    private HashMap<Integer, Pair<Double, Double>> pointAIMMap = new HashMap<>();
 
     private final PriorityBlockingQueue<ScanTask> scanTaskQueue =
             new PriorityBlockingQueue<ScanTask>(11, new Comparator<ScanTask>() {
@@ -49,33 +54,23 @@ public class YourService extends KiboRpcService {
     @Override
     protected void runPlan1(){
         itemDetectorUtils = new ItemDetectorUtils(getApplicationContext());
-//        Vision vision = new Vision();
-//        Thread visionThread = new Thread(vision);
-//        Handler handler = new Handler(Looper.getMainLooper());
+        vision = new Vision();
+        Thread visionThread = new Thread(vision);
 
         api.startMission();
         api.flashlightControlBack(0.05f);
         api.flashlightControlFront(0.05f);
         initCamParameter();
 
-        startScan(1);
+        visionThread.start();
+        scanTask();
 
-//        visionThread.start();
-
-//        moveToWithRetry(point1, 1);
-//        moveToWithRetry(point2,1);
-////        moveToWithRetry(point23, 1);
-//        moveToWithRetry(point3,1);
-//        moveToWithRetry(point34, 1);
-//        moveToWithRetry(point4,1);
-
-
-//        vision.stopRunning();
-//        try{
-//            visionThread.join();
-//        } catch(InterruptedException e){
-//            Thread.currentThread().interrupt();
-//        }
+        vision.stopRunning();
+        try{
+            visionThread.join();
+        } catch(InterruptedException e){
+            Thread.currentThread().interrupt();
+        }
 
         moveToWithRetry(astronautPQ,1);
         reportAreaInfoAndEndRounding();
@@ -85,35 +80,22 @@ public class YourService extends KiboRpcService {
         api.shutdownFactory();
     }
 
-    private void startScan(int startArea){
-        final int targetArea = startArea;
-        vision = new Vision();
-        goTo(targetArea);
-        SystemClock.sleep(goToSleepMillis);
-        vision.run();
-        if (startArea < 4){
-            vision.stopRunning();
-            startScan(targetArea + 1);
-        }
-    }
+    private void scanTask(){
+        moveToWithRetry(area1, 1);
+        SystemClock.sleep(scanSleepMillis);
+        estimateAruco(Cam.DOCK, area1,1);
 
-    private void goTo(int area){
-        switch(area){
-            case 1:
-                moveToWithRetry(area1, 1);
-                break;
-            case 2:
-                moveToWithRetry(area2, 1);
-                break;
-            case 3:
-                moveToWithRetry(area3, 1);
-                break;
-            case 4:
-                moveToWithRetry(area4, 1);
-                break;
-            default:
-                Log.e("GoTo", "ERROR: Invalid area.");
-        }
+        moveToWithRetry(area2, 1);
+        SystemClock.sleep(scanSleepMillis);
+        estimateAruco(Cam.NAV, area2,2);
+
+        moveToWithRetry(area3, 1);
+        SystemClock.sleep(scanSleepMillis);
+        estimateAruco(Cam.NAV, area3,3);
+
+        moveToWithRetry(area4, 1);
+        SystemClock.sleep(scanSleepMillis);
+        estimateAruco(Cam.DOCK, area4,4);
     }
 
     private class ScanTask {
@@ -147,97 +129,73 @@ public class YourService extends KiboRpcService {
         public void stopRunning(){
             running = false;
         }
-//
+
         public boolean isRunning() {
             return running;
         }
 
         @Override
         public void run() {
-            scanTaskQueue.clear();
-//            Mat navImgPast = api.getMatNavCam();
+            Mat navImgPast = api.getMatNavCam();
             Mat dockImgPast = api.getMatDockCam();
-//            long startTime = System.currentTimeMillis();
 
-//          while (running && System.currentTimeMillis() - startTime < scanning_duration_millis) {
+            while (running && !Thread.currentThread().isInterrupted()) {
+                final Mat navImgNow = api.getMatNavCam();
+                final Mat dockImgNow = api.getMatDockCam();
 
-            final Mat navImgNow = api.getMatNavCam();
-            final Mat dockImgNow = api.getMatDockCam();
+                long pastTime = System.currentTimeMillis();
 
-            final Kinematics robotNowKinematics = api.getRobotKinematics();
-            long pastTime = System.currentTimeMillis();
+                if (ImageProcessUtils.areImgDiff(navImgPast, navImgNow)) {
+                    navImgPast = navImgNow;
 
-//                if (ImageProcessUtils.areImgDiff(navImgPast, navImgNow)) {
-//                    navImgPast = navImgNow;
-//
-//                    final Mat calibNavImg = ImageProcessUtils.calibCamImg(navImgNow, navCamParameter);
-//
-//                    executorService.submit(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            estimateAruco(navImgNow, dockCamParameter, robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
-//                            scanItemFromMat(calibNavImg, navCamParameter);
-//                        }
-//                    });
-//                }
+                    final Mat calibNavImg = ImageProcessUtils.calibCamImg(navImgNow, navCamParameter);
 
-            final Mat calibNavImg = ImageProcessUtils.calibCamImg(navImgNow, navCamParameter);
-            estimateAruco(
-                    navImgNow,
-                    dockCamParameter,
-                    robotNowKinematics.getPosition(),
-                    robotNowKinematics.getOrientation()
-            );
-            scanItemFromMat(calibNavImg, navCamParameter);
+                    executorService.submit(new Runnable() {
+                        @Override
+                        public void run() {
+                            scanItemFromMat(calibNavImg, navCamParameter);
+                        }
+                    });
+                }
 
-//                if (ImageProcessUtils.areImgDiff(dockImgPast, dockImgNow)) {
-//                    dockImgPast = dockImgNow;
-//
-//                    final Mat calibDockImg = ImageProcessUtils.calibCamImg(dockImgNow, dockCamParameter);
-//
-//                    executorService.submit(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            estimateAruco(dockImgNow, dockCamParameter, robotNowKinematics.getPosition(), QuaternionUtils.quaternionConjugate(robotNowKinematics.getOrientation()));
-//                            scanItemFromMat(calibDockImg, dockCamParameter);
-//                        }
-//                    });
-//                }
-            final Mat calibDockImg = ImageProcessUtils.calibCamImg(dockImgNow, dockCamParameter);
-            estimateAruco(
-                    dockImgNow,
-                    dockCamParameter,
-                    robotNowKinematics.getPosition(),
-                    QuaternionUtils.quaternionConjugate(robotNowKinematics.getOrientation())
-            );
-            scanItemFromMat(calibDockImg, dockCamParameter);
+                if (ImageProcessUtils.areImgDiff(dockImgPast, dockImgNow)) {
+                    dockImgPast = dockImgNow;
 
-            while (!scanTaskQueue.isEmpty()) {
-                ScanTask task = scanTaskQueue.poll();
-                if (task != null) task.process();
+                    final Mat calibDockImg = ImageProcessUtils.calibCamImg(dockImgNow, dockCamParameter);
+
+                    executorService.submit(new Runnable() {
+                        @Override
+                        public void run() {
+                            scanItemFromMat(calibDockImg, dockCamParameter);
+                        }
+                    });
+                }
+
+                while (!scanTaskQueue.isEmpty()) {
+                    ScanTask task = scanTaskQueue.poll();
+                    if (task != null) {
+                        task.process();
+                    }
+                }
+
+                try {
+                    long processingTime = System.currentTimeMillis() - pastTime;
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
 
-//                try {
-//                    long processingTime = System.currentTimeMillis() - pastTime;
-//                    Thread.sleep(100);
-//                } catch (InterruptedException e) {
-//                    Thread.currentThread().interrupt();
-//                    break;
-//                }
-//            running = false;
+            executorService.shutdown();
+            try {
+                if (!executorService.awaitTermination(visionThread_stoppingLatency, TimeUnit.SECONDS)){
+                    executorService.shutdownNow();
+                }
+            } catch (InterruptedException e){
+                executorService.shutdownNow();
+            }
         }
-//            running = false;
-//            executorService.shutdown();
-//            try {
-//                if (!executorService.awaitTermination(visionThread_stoppingLatency, TimeUnit.SECONDS)){
-//                    executorService.shutdownNow();
-//                }
-//            } catch (InterruptedException e){
-//                executorService.shutdownNow();
-//            }
-//        }
-
-
     }
 
     private void initCamParameter() {
@@ -280,38 +238,78 @@ public class YourService extends KiboRpcService {
         }
     }
 
-    private void estimateAruco(Mat img, CamParameter camParameter, Point robotPosition, Quaternion camQuaternion){
+    private void estimateAruco(Cam cam, PointWithQuaternion robotPQ, Integer areaNum){
+        Mat mat;
+        CamParameter camParameter;
+
+        if(cam == Cam.DOCK){
+            mat = api.getMatDockCam();
+            camParameter = dockCamParameter;
+            robotPQ.quaternion = quaternionConjugate(robotPQ.quaternion);
+        }else {
+            mat = api.getMatNavCam();
+            camParameter = navCamParameter;
+        }
+
+        Imgproc.equalizeHist(mat, mat);
+
         List<Mat> arucoCorners = new ArrayList<>();
         Mat arucoIDs = new Mat();
+        DetectorParameters parameters = DetectorParameters.create();
 
-        Aruco.detectMarkers(img, Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250), arucoCorners, arucoIDs);
+        parameters.set_cornerRefinementMethod(Aruco.CORNER_REFINE_APRILTAG);
+        parameters.set_cornerRefinementWinSize(7);
+        parameters.set_cornerRefinementMaxIterations(100);
+        parameters.set_cornerRefinementMinAccuracy(0.005);
+
+        parameters.set_minMarkerPerimeterRate(0.01);
+        parameters.set_adaptiveThreshWinSizeMin(3);
+        parameters.set_adaptiveThreshWinSizeMax(23);
+        parameters.set_adaptiveThreshWinSizeStep(10);
+        parameters.set_minDistanceToBorder(1);
+        parameters.set_polygonalApproxAccuracyRate(0.05);
+
+        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250);
+        Aruco.detectMarkers(mat, dictionary, arucoCorners, arucoIDs, parameters);
 
         if(!arucoIDs.empty()) {
             Mat rvecs = new Mat();
             Mat tvecs = new Mat();
-            Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, camParameter.camMatrix, camParameter.camDistCoeffs, rvecs, tvecs);
+            Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, camParameter.arUcoCalibCamMatrix, camParameter.zeroDistCoeffs, rvecs, tvecs);
 
             for (int i = 0; i < arucoIDs.rows(); i++) {
                 int id = (int) arucoIDs.get(i, 0)[0]-100;
-                if (id < 1 || id > 4) { continue; }
-                Mat tvec = tvecs.row(i);
+                if(id!=areaNum){continue;}
 
-                Pair<QuaternionUtils.Axis, Double> arucoPosFixAxisConst = null;
-
-                if (id == 2 || id == 3) {
-                    arucoPosFixAxisConst = new Pair<>(QuaternionUtils.Axis.Z, 3.76203);
-                } else if (id == 1) {
-                    arucoPosFixAxisConst = new Pair<>(QuaternionUtils.Axis.Y, -10.58);
-                } else {
-                    arucoPosFixAxisConst = new Pair<>(Axis.X, 9.866984);
+                Mat cornerMat = arucoCorners.get(i);
+                org.opencv.core.Point[] corners = new org.opencv.core.Point[4];
+                for (int j = 0; j < 4; j++) {
+                    double[] pointData = cornerMat.get(0, j);
+                    corners[j] = new org.opencv.core.Point(pointData[0], pointData[1]); // x, y
                 }
 
-                Point arucoWorldPos = QuaternionUtils.solveWorldPositionWithFixedAxis(tvec, robotPosition, camQuaternion,arucoPosFixAxisConst, camParameter.offSetCenter);
+                double centerX = 0;
+                double centerY = 0;
+                for (org.opencv.core.Point p : corners) {
+                    centerX += p.x;
+                    centerY += p.y;
+                }
+                centerX /= 4.0;
+                centerY /= 4.0;
 
-                double[] tvecArray = tvec.get(0, 0);
-                Log.i("arucoWorldPos",id + ":  "+ arucoWorldPos);
-                Log.i("robotPos",robotPosition + "//"+ camQuaternion);
-                Log.i("arucoRelativePos",id + ":  "+ tvecArray[0] + ","+ tvecArray[1] + ","+ tvecArray[2] + ",");
+                double errorX = centerX - 480;
+                double errorY = centerY - 960;
+                if(id==2||id==3){
+                    errorX *= 0.003;
+                    errorY *= 0.003;
+                }else if(id==1){
+                    errorX *= 0.003;
+                    errorY *= 0.003;
+                }else{
+                    errorX *= 0.003;
+                    errorY *= 0.003;
+                }
+                pointAIMMap.put(id, new Pair<Double, Double>(errorX,errorY));
             }
         }
     }
@@ -380,19 +378,18 @@ public class YourService extends KiboRpcService {
 
     private void endGameTask(Integer areaNum){
         if(areaNum==null){areaNum = -1;}
-
         switch (areaNum){
             case 1:
-                moveToWithRetry(targetPQ_area1, 5);
+                moveToWithRetry(targetPQ_area1, 1);
                 break;
             case 2:
-                moveToWithRetry(targetPQ_area2, 5);
+                moveToWithRetry(targetPQ_area2, 1);
                 break;
             case 3:
-                moveToWithRetry(targetPQ_area3, 5);
+                moveToWithRetry(targetPQ_area3, 1);
                 break;
             default:
-                moveToWithRetry(targetPQ_area4, 5);
+                moveToWithRetry(targetPQ_area4, 1);
                 break;
         }
 
@@ -408,7 +405,6 @@ public class YourService extends KiboRpcService {
                 moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - error.getX(), robotPos.getZ() + error.getY()), new Quaternion(0f,0f,-1f,0f)),5);
             }
         }
-
         api.takeTargetItemSnapshot();
     }
 
