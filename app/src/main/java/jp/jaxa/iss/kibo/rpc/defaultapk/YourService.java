@@ -1,6 +1,8 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk;
 
 import android.graphics.Bitmap;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 import android.util.Pair;
@@ -13,7 +15,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import gov.nasa.arc.astrobee.Kinematics;
 import gov.nasa.arc.astrobee.Result;
@@ -48,34 +49,71 @@ public class YourService extends KiboRpcService {
     @Override
     protected void runPlan1(){
         itemDetectorUtils = new ItemDetectorUtils(getApplicationContext());
-        vision = new Vision();
-        Thread visionThread = new Thread(vision);
+//        Vision vision = new Vision();
+//        Thread visionThread = new Thread(vision);
+//        Handler handler = new Handler(Looper.getMainLooper());
 
         api.startMission();
         api.flashlightControlBack(0.05f);
         api.flashlightControlFront(0.05f);
         initCamParameter();
 
-        visionThread.start();
+        startScan(1);
 
-        moveToWithRetry(point1, 1);
-        moveToWithRetry(point2,1);
-        moveToWithRetry(point3,1);
-        moveToWithRetry(point4,1);
+//        visionThread.start();
+
+//        moveToWithRetry(point1, 1);
+//        moveToWithRetry(point2,1);
+////        moveToWithRetry(point23, 1);
+//        moveToWithRetry(point3,1);
+//        moveToWithRetry(point34, 1);
+//        moveToWithRetry(point4,1);
+
+
+//        vision.stopRunning();
+//        try{
+//            visionThread.join();
+//        } catch(InterruptedException e){
+//            Thread.currentThread().interrupt();
+//        }
+
         moveToWithRetry(astronautPQ,1);
-
-        vision.stopRunning();
-        try{
-            visionThread.join();
-        } catch(InterruptedException e){
-            Thread.currentThread().interrupt();
-        }
-
         reportAreaInfoAndEndRounding();
         api.notifyRecognitionItem();
         String targetItem = recognizeTargetItem();
         endGameTask(itemDetectorUtils.getTargetArea(targetItem));
         api.shutdownFactory();
+    }
+
+    private void startScan(int startArea){
+        final int targetArea = startArea;
+        vision = new Vision();
+        goTo(targetArea);
+        SystemClock.sleep(goToSleepMillis);
+        vision.run();
+        if (startArea < 4){
+            vision.stopRunning();
+            startScan(targetArea + 1);
+        }
+    }
+
+    private void goTo(int area){
+        switch(area){
+            case 1:
+                moveToWithRetry(area1, 1);
+                break;
+            case 2:
+                moveToWithRetry(area2, 1);
+                break;
+            case 3:
+                moveToWithRetry(area3, 1);
+                break;
+            case 4:
+                moveToWithRetry(area4, 1);
+                break;
+            default:
+                Log.e("GoTo", "ERROR: Invalid area.");
+        }
     }
 
     private class ScanTask {
@@ -109,76 +147,97 @@ public class YourService extends KiboRpcService {
         public void stopRunning(){
             running = false;
         }
-
+//
         public boolean isRunning() {
             return running;
         }
 
         @Override
         public void run() {
-            Mat navImgPast = api.getMatNavCam();
+            scanTaskQueue.clear();
+//            Mat navImgPast = api.getMatNavCam();
             Mat dockImgPast = api.getMatDockCam();
+//            long startTime = System.currentTimeMillis();
 
-            while (running && !Thread.currentThread().isInterrupted()) {
-                final Mat navImgNow = api.getMatNavCam();
-                final Mat dockImgNow = api.getMatDockCam();
+//          while (running && System.currentTimeMillis() - startTime < scanning_duration_millis) {
 
-                final Kinematics robotNowKinematics = api.getRobotKinematics();
-                long pastTime = System.currentTimeMillis();
+            final Mat navImgNow = api.getMatNavCam();
+            final Mat dockImgNow = api.getMatDockCam();
 
-                if (ImageProcessUtils.areImgDiff(navImgPast, navImgNow)) {
-                    navImgPast = navImgNow;
+            final Kinematics robotNowKinematics = api.getRobotKinematics();
+            long pastTime = System.currentTimeMillis();
 
-                    final Mat calibNavImg = ImageProcessUtils.calibCamImg(navImgNow, navCamParameter);
+//                if (ImageProcessUtils.areImgDiff(navImgPast, navImgNow)) {
+//                    navImgPast = navImgNow;
+//
+//                    final Mat calibNavImg = ImageProcessUtils.calibCamImg(navImgNow, navCamParameter);
+//
+//                    executorService.submit(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            estimateAruco(navImgNow, dockCamParameter, robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
+//                            scanItemFromMat(calibNavImg, navCamParameter);
+//                        }
+//                    });
+//                }
 
-                    executorService.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            estimateAruco(navImgNow, dockCamParameter, robotNowKinematics.getPosition(), robotNowKinematics.getOrientation());
-                            scanItemFromMat(calibNavImg, navCamParameter);
-                        }
-                    });
-                }
+            final Mat calibNavImg = ImageProcessUtils.calibCamImg(navImgNow, navCamParameter);
+            estimateAruco(
+                    navImgNow,
+                    dockCamParameter,
+                    robotNowKinematics.getPosition(),
+                    robotNowKinematics.getOrientation()
+            );
+            scanItemFromMat(calibNavImg, navCamParameter);
 
-                if (ImageProcessUtils.areImgDiff(dockImgPast, dockImgNow)) {
-                    dockImgPast = dockImgNow;
+//                if (ImageProcessUtils.areImgDiff(dockImgPast, dockImgNow)) {
+//                    dockImgPast = dockImgNow;
+//
+//                    final Mat calibDockImg = ImageProcessUtils.calibCamImg(dockImgNow, dockCamParameter);
+//
+//                    executorService.submit(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            estimateAruco(dockImgNow, dockCamParameter, robotNowKinematics.getPosition(), QuaternionUtils.quaternionConjugate(robotNowKinematics.getOrientation()));
+//                            scanItemFromMat(calibDockImg, dockCamParameter);
+//                        }
+//                    });
+//                }
+            final Mat calibDockImg = ImageProcessUtils.calibCamImg(dockImgNow, dockCamParameter);
+            estimateAruco(
+                    dockImgNow,
+                    dockCamParameter,
+                    robotNowKinematics.getPosition(),
+                    QuaternionUtils.quaternionConjugate(robotNowKinematics.getOrientation())
+            );
+            scanItemFromMat(calibDockImg, dockCamParameter);
 
-                    final Mat calibDockImg = ImageProcessUtils.calibCamImg(dockImgNow, dockCamParameter);
-
-                    executorService.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            estimateAruco(dockImgNow, dockCamParameter, robotNowKinematics.getPosition(), QuaternionUtils.quaternionConjugate(robotNowKinematics.getOrientation()));
-                            scanItemFromMat(calibDockImg, dockCamParameter);
-                        }
-                    });
-                }
-
-                while (!scanTaskQueue.isEmpty()) {
-                    ScanTask task = scanTaskQueue.poll();
-                    if (task != null) {
-                        task.process();
-                    }
-                }
-
-                try {
-                    long processingTime = System.currentTimeMillis() - pastTime;
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
+            while (!scanTaskQueue.isEmpty()) {
+                ScanTask task = scanTaskQueue.poll();
+                if (task != null) task.process();
             }
 
-            executorService.shutdown();
-            try {
-                if (!executorService.awaitTermination(visionThread_stoppingLatency, TimeUnit.SECONDS)){
-                    executorService.shutdownNow();
-                }
-            } catch (InterruptedException e){
-                executorService.shutdownNow();
-            }
+//                try {
+//                    long processingTime = System.currentTimeMillis() - pastTime;
+//                    Thread.sleep(100);
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                    break;
+//                }
+//            running = false;
         }
+//            running = false;
+//            executorService.shutdown();
+//            try {
+//                if (!executorService.awaitTermination(visionThread_stoppingLatency, TimeUnit.SECONDS)){
+//                    executorService.shutdownNow();
+//                }
+//            } catch (InterruptedException e){
+//                executorService.shutdownNow();
+//            }
+//        }
+
+
     }
 
     private void initCamParameter() {
