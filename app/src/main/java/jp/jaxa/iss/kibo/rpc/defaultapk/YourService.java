@@ -102,7 +102,7 @@ public class YourService extends KiboRpcService {
         moveToWithRetry(area4, 10);
         SystemClock.sleep(scanSleepMillis);
         estimateAruco(Cam.DOCK, area4,4);
-        SystemClock.sleep(1500);
+//        SystemClock.sleep(1500);
     }
 
     private class ScanTask {
@@ -286,6 +286,9 @@ public class YourService extends KiboRpcService {
 
             for (int i = 0; i < arucoIDs.rows(); i++) {
                 int id = (int) arucoIDs.get(i, 0)[0]-100;
+
+                if (id != areaNum) continue;
+
                 Mat tvec = tvecs.row(i);
                 Mat rvec = rvecs.row(i);
 
@@ -298,8 +301,45 @@ public class YourService extends KiboRpcService {
                 double x = imagePoint.x;
                 double y = imagePoint.y;
 
-                estimate.computeProjectedPoint(mat, new org.opencv.core.Point(x,y), id);
+                org.opencv.core.Point projectedPointRatio = estimate.computeProjectedPoint(mat, new org.opencv.core.Point(x,y), id);
+                org.opencv.core.Point targetOrigin, targetMax;
 
+                switch (id){
+                    case 1:
+                        targetOrigin = area1Origin;
+                        targetMax = area1Max;
+                        break;
+                    case 2:
+                        targetOrigin = area2Origin;
+                        targetMax = area2Max;
+                        break;
+                    case 3:
+                        targetOrigin = area3Origin;
+                        targetMax = area3Max;
+                        break;
+                    default:
+                        targetOrigin = area4Origin;
+                        targetMax = area4Max;
+                }
+
+                double projectedPointX = targetOrigin.x + ( (targetMax.x - targetOrigin.x ) * projectedPointRatio.x);
+                double projectedPointY = targetOrigin.y + ( (targetMax.y - targetOrigin.y ) * projectedPointRatio.y);
+
+                Point projectedPoint;
+
+                switch (id){
+                    case 1:
+                        projectedPoint = new Point(projectedPointY, targetY_area1, projectedPointX + 0.10);
+                        break;
+                    case 2: case 3:
+                        projectedPoint = new Point(projectedPointX, projectedPointY, targetZ_area23);
+                        break;
+                    default:
+                        projectedPoint = new Point(targetX_area4, projectedPointY, projectedPointX);
+                        break;
+                }
+
+                pointAIMMap.put(id, projectedPoint);
 
                 api.saveMatImage(mat,id+"AIM.png");
             }
@@ -399,28 +439,30 @@ public class YourService extends KiboRpcService {
 //                break;
 //        }
 //
-        Point robotPos;
-        switch (areaNum){
-            case 1:
-                robotPos = area1.point;
-            case 2:
-                robotPos = area2.point;
-            case 3:
-                robotPos = area3.point;
-            default:
-                robotPos = area4.point;
-        }
 
 //        SystemClock.sleep(3500);
-        Point error = pointAIMMap.get(areaNum);
-        if(error != null){
-            if(areaNum == 2||areaNum == 3){
-                moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() - error.getX(), robotPos.getY() + error.getY(), targetZ_area23), new Quaternion(0.5f, 0.5f, -0.5f, 0.5f)),1);
-            }else if(areaNum == 1){
-                moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getY(), targetY_area1, robotPos.getZ() - error.getX()), new Quaternion(0f, 0f, -0.707f, 0.707f)),5);
-            }else {
-                moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - error.getY(), robotPos.getZ() - error.getX()), new Quaternion(0f,0f,-1f,0f)),1);
+        Point targetP = pointAIMMap.get(areaNum);
+        Quaternion targetQ;
+
+        if(targetP != null){
+            switch(areaNum){
+                case 1:
+                    targetQ = new Quaternion(0f, 0f, -0.707f, 0.707f);
+                    break;
+                case 2: case 3:
+                    targetQ = new Quaternion(0.5f, 0.5f, -0.5f, 0.5f);
+                    break;
+                default:
+                    targetQ = new Quaternion(0f,0f,-1f,0f);
             }
+            moveToWithRetry(new PointWithQuaternion(targetP, targetQ), 1);
+//            if(areaNum == 2||areaNum == 3){
+//                moveToWithRetry(new PointWithQuaternion(target, new Quaternion(0.5f, 0.5f, -0.5f, 0.5f)),1);
+//            }else if(areaNum == 1){
+//                moveToWithRetry(new PointWithQuaternion(target, new Quaternion(0f, 0f, -0.707f, 0.707f)),5);
+//            }else {
+//                moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - target.getY(), robotPos.getZ() - target.getX()), new Quaternion(0f,0f,-1f,0f)),1);
+//            }
         }
         api.takeTargetItemSnapshot();
     }
