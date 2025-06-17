@@ -8,8 +8,11 @@ import android.util.Pair;
 import org.opencv.aruco.Aruco;
 import org.opencv.aruco.DetectorParameters;
 import org.opencv.aruco.Dictionary;
+import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.MatOfPoint3f;
+import org.opencv.core.Point3;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -25,6 +28,7 @@ import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.CamParameter;
+import jp.jaxa.iss.kibo.rpc.defaultapk.utils.Estimate;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ImageProcessUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.model.PointWithQuaternion;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ItemDetectorUtils;
@@ -38,8 +42,9 @@ public class YourService extends KiboRpcService {
     private CamParameter dockCamParameter = new CamParameter();
     private ItemDetectorUtils itemDetectorUtils;
     private QuaternionUtils quaternionUtils;
+    private Estimate estimate;
     private Vision vision;
-    private HashMap<Integer, Pair<Double, Double>> pointAIMMap = new HashMap<>();
+    private HashMap<Integer, Point> pointAIMMap = new HashMap<>();
 
     private final PriorityBlockingQueue<ScanTask> scanTaskQueue =
             new PriorityBlockingQueue<ScanTask>(11, new Comparator<ScanTask>() {
@@ -58,6 +63,7 @@ public class YourService extends KiboRpcService {
         Thread visionThread = new Thread(vision);
 
         api.startMission();
+        estimate = new Estimate(getAssets());
         api.flashlightControlBack(0.05f);
         api.flashlightControlFront(0.05f);
         initCamParameter();
@@ -81,21 +87,22 @@ public class YourService extends KiboRpcService {
     }
 
     private void scanTask(){
-        moveToWithRetry(area1, 1);
+        moveToWithRetry(area1, 10);
         SystemClock.sleep(scanSleepMillis);
         estimateAruco(Cam.DOCK, area1,1);
 
-        moveToWithRetry(area2, 1);
+        moveToWithRetry(area2, 10);
         SystemClock.sleep(scanSleepMillis);
         estimateAruco(Cam.NAV, area2,2);
 
-        moveToWithRetry(area3, 1);
+        moveToWithRetry(area3, 10);
         SystemClock.sleep(scanSleepMillis);
         estimateAruco(Cam.NAV, area3,3);
 
-        moveToWithRetry(area4, 1);
+        moveToWithRetry(area4, 10);
         SystemClock.sleep(scanSleepMillis);
         estimateAruco(Cam.DOCK, area4,4);
+        SystemClock.sleep(1500);
     }
 
     private class ScanTask {
@@ -251,65 +258,51 @@ public class YourService extends KiboRpcService {
             camParameter = navCamParameter;
         }
 
-        Imgproc.equalizeHist(mat, mat);
-
         List<Mat> arucoCorners = new ArrayList<>();
         Mat arucoIDs = new Mat();
-        DetectorParameters parameters = DetectorParameters.create();
 
-        parameters.set_cornerRefinementMethod(Aruco.CORNER_REFINE_APRILTAG);
-        parameters.set_cornerRefinementWinSize(7);
-        parameters.set_cornerRefinementMaxIterations(100);
-        parameters.set_cornerRefinementMinAccuracy(0.005);
-
-        parameters.set_minMarkerPerimeterRate(0.01);
-        parameters.set_adaptiveThreshWinSizeMin(3);
-        parameters.set_adaptiveThreshWinSizeMax(23);
-        parameters.set_adaptiveThreshWinSizeStep(10);
-        parameters.set_minDistanceToBorder(1);
-        parameters.set_polygonalApproxAccuracyRate(0.05);
+        mat = ImageProcessUtils.calibCamImg(mat, camParameter);
 
         Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250);
+        DetectorParameters parameters = DetectorParameters.create();
+
+        parameters.set_adaptiveThreshWinSizeMin(3);
+        parameters.set_adaptiveThreshWinSizeMax(23);
+        parameters.set_adaptiveThreshConstant(5);
+        parameters.set_minMarkerPerimeterRate(0.02f);
+        parameters.set_maxMarkerPerimeterRate(4.0f);
+        parameters.set_minDistanceToBorder(1);
+        parameters.set_cornerRefinementMethod(Aruco.CORNER_REFINE_SUBPIX);
+        parameters.set_cornerRefinementWinSize(5);
+        parameters.set_cornerRefinementMaxIterations(100);
+        parameters.set_cornerRefinementMinAccuracy(0.005f);
+
         Aruco.detectMarkers(mat, dictionary, arucoCorners, arucoIDs, parameters);
 
         if(!arucoIDs.empty()) {
             Mat rvecs = new Mat();
             Mat tvecs = new Mat();
-            Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, camParameter.arUcoCalibCamMatrix, camParameter.zeroDistCoeffs, rvecs, tvecs);
+            Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, camParameter.arUcoCalibCamMatrix, camParameter.zeroDoubleDistCoeffs, rvecs, tvecs);
 
             for (int i = 0; i < arucoIDs.rows(); i++) {
                 int id = (int) arucoIDs.get(i, 0)[0]-100;
-                if(id!=areaNum){continue;}
+                Mat tvec = tvecs.row(i);
+                Mat rvec = rvecs.row(i);
 
-                Mat cornerMat = arucoCorners.get(i);
-                org.opencv.core.Point[] corners = new org.opencv.core.Point[4];
-                for (int j = 0; j < 4; j++) {
-                    double[] pointData = cornerMat.get(0, j);
-                    corners[j] = new org.opencv.core.Point(pointData[0], pointData[1]); // x, y
-                }
+                MatOfPoint3f itemBoardWorldPoint = new MatOfPoint3f(new Point3(-0.1325, -0.0375, 0));
+                MatOfPoint2f itemBoardImagePoints = new MatOfPoint2f();
 
-                double centerX = 0;
-                double centerY = 0;
-                for (org.opencv.core.Point p : corners) {
-                    centerX += p.x;
-                    centerY += p.y;
-                }
-                centerX /= 4.0;
-                centerY /= 4.0;
+                Calib3d.projectPoints(itemBoardWorldPoint, rvec, tvec, camParameter.camMatrix, camParameter.zeroDoubleDistCoeffs, itemBoardImagePoints);
 
-                double errorX = centerX - 480;
-                double errorY = centerY - 960;
-                if(id==2||id==3){
-                    errorX *= 0.003;
-                    errorY *= 0.003;
-                }else if(id==1){
-                    errorX *= 0.003;
-                    errorY *= 0.003;
-                }else{
-                    errorX *= 0.003;
-                    errorY *= 0.003;
-                }
-                pointAIMMap.put(id, new Pair<Double, Double>(errorX,errorY));
+                org.opencv.core.Point imagePoint = itemBoardImagePoints.toList().get(0);
+                double x = imagePoint.x;
+                double y = imagePoint.y;
+
+                double tx = x - 640;
+                double ty = y - 480;
+
+
+                api.saveMatImage(mat,id+"AIM.png");
             }
         }
     }
@@ -353,7 +346,21 @@ public class YourService extends KiboRpcService {
             List<Mat> arucoCorners = new ArrayList<>();
             Mat arucoIDs = new Mat();
 
-            Aruco.detectMarkers(img, Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250), arucoCorners, arucoIDs);
+            Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250);
+            DetectorParameters parameters = DetectorParameters.create();
+
+            parameters.set_adaptiveThreshWinSizeMin(3);
+            parameters.set_adaptiveThreshWinSizeMax(23);
+            parameters.set_adaptiveThreshConstant(5);
+            parameters.set_minMarkerPerimeterRate(0.02f);
+            parameters.set_maxMarkerPerimeterRate(4.0f);
+            parameters.set_minDistanceToBorder(1);
+            parameters.set_cornerRefinementMethod(Aruco.CORNER_REFINE_SUBPIX);
+            parameters.set_cornerRefinementWinSize(5);
+            parameters.set_cornerRefinementMaxIterations(100);
+            parameters.set_cornerRefinementMinAccuracy(0.005f);
+
+            Aruco.detectMarkers(img, dictionary, arucoCorners, arucoIDs, parameters);
 
             if(!arucoIDs.empty()) {
                 Mat rvecs = new Mat();
@@ -377,61 +384,45 @@ public class YourService extends KiboRpcService {
     }
 
     private void endGameTask(Integer areaNum){
-        if(areaNum==null){areaNum = -1;}
+//        if(areaNum==null){areaNum = -1;}
+//        switch (areaNum){
+//            case 1:
+//                moveToWithRetry(targetPQ_area1, 1);
+//                break;
+//            case 2:
+//                moveToWithRetry(targetPQ_area2, 1);
+//                break;
+//            case 3:
+//                moveToWithRetry(targetPQ_area3, 1);
+//                break;
+//            default:
+//                moveToWithRetry(targetPQ_area4, 1);
+//                break;
+//        }
+//
+        Point robotPos;
         switch (areaNum){
             case 1:
-                moveToWithRetry(targetPQ_area1, 1);
-                break;
+                robotPos = area1.point;
             case 2:
-                moveToWithRetry(targetPQ_area2, 1);
-                break;
+                robotPos = area2.point;
             case 3:
-                moveToWithRetry(targetPQ_area3, 1);
-                break;
+                robotPos = area3.point;
             default:
-                moveToWithRetry(targetPQ_area4, 1);
-                break;
+                robotPos = area4.point;
         }
 
-        Point robotPos = api.getRobotKinematics().getPosition();
-        SystemClock.sleep(3500);
-        Point error = calcArucoPos(ImageProcessUtils.calibCamImg(api.getMatNavCam(), navCamParameter), areaNum);
+//        SystemClock.sleep(3500);
+        Point error = pointAIMMap.get(areaNum);
         if(error != null){
             if(areaNum == 2||areaNum == 3){
-                moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), robotPos.getY() - error.getY(), targetZ_area23), new Quaternion(0.5f, 0.5f, -0.5f, 0.5f)),5);
+                moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() - error.getX(), robotPos.getY() + error.getY(), targetZ_area23), new Quaternion(0.5f, 0.5f, -0.5f, 0.5f)),1);
             }else if(areaNum == 1){
-                moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), targetY_area1, robotPos.getZ() + error.getY()), new Quaternion(0f, 0f, -0.707f, 0.707f)),5);
+                moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getY(), targetY_area1, robotPos.getZ() - error.getX()), new Quaternion(0f, 0f, -0.707f, 0.707f)),5);
             }else {
-                moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - error.getX(), robotPos.getZ() + error.getY()), new Quaternion(0f,0f,-1f,0f)),5);
+                moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - error.getY(), robotPos.getZ() - error.getX()), new Quaternion(0f,0f,-1f,0f)),1);
             }
         }
         api.takeTargetItemSnapshot();
-    }
-
-    private Point calcArucoPos(Mat img, Integer targetAreaNum) {
-        List<Mat> arucoCorners = new ArrayList<>();
-        Mat arucoIDs = new Mat();
-
-        Aruco.detectMarkers(img, Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250), arucoCorners, arucoIDs);
-
-        if(!arucoIDs.empty()) {
-            Mat rvecs = new Mat();
-            Mat tvecs = new Mat();
-            Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, navCamParameter.arUcoCalibCamMatrix, navCamParameter.zeroDoubleDistCoeffs, rvecs, tvecs);
-
-            for (int i = 0; i < arucoIDs.rows(); i++) {
-                int id = (int) arucoIDs.get(i, 0)[0]-100;
-                if(id != targetAreaNum){continue;}
-                Mat tvec = tvecs.row(i);
-
-                double[] tvecArray = tvec.get(0, 0);
-                double tx = tvecArray[0];
-                double ty = tvecArray[1];
-                double tz = tvecArray[2];
-
-                return new Point(tx, ty, tz);
-            }
-        }
-        return null;
     }
 }

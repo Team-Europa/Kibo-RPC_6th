@@ -9,6 +9,7 @@ import org.opencv.core.Scalar;
 public class CamParameter {
     public Mat camMatrix;
     public Mat camDistCoeffs;
+    public MatOfDouble camDistCoeffsDouble;
     private double[][] camIntrinsicsMatrix;
     public Double[] offSetCenter;
     public Mat zeroDistCoeffs;
@@ -25,6 +26,11 @@ public class CamParameter {
         setCamCalib(camIntrinsicsMatrix[0], camIntrinsicsMatrix[1], camMatrix, camDistCoeffs);
         setArUcoCalibCamMatrix();
         setZeroDistCoeffs();
+
+        camDistCoeffsDouble = new MatOfDouble();
+        double[] coeffs = new double[(int) (camDistCoeffs.total() * camDistCoeffs.channels())];
+        camDistCoeffs.get(0, 0, coeffs);
+        camDistCoeffsDouble.fromArray(coeffs);
     }
 
     private void setCamCalib(double[] cameraDoubleMatrix, double[] distortionCoefficientsDoubleMatrix, Mat cameraMatrix, Mat distortionCoefficients) {
