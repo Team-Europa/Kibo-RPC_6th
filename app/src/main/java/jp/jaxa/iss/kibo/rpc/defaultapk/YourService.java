@@ -298,7 +298,7 @@ public class YourService extends KiboRpcService {
                 double x = imagePoint.x;
                 double y = imagePoint.y;
 
-
+                estimate.computeProjectedPoint(mat, new org.opencv.core.Point(x,y), id);
 
 
                 api.saveMatImage(mat,id+"AIM.png");
