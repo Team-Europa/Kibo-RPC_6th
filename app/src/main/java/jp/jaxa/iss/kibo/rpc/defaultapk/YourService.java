@@ -102,7 +102,7 @@ public class YourService extends KiboRpcService {
         moveToWithRetry(area4, 10);
         SystemClock.sleep(scanSleepMillis);
         estimateAruco(Cam.DOCK, area4,4);
-//        SystemClock.sleep(1500);
+        SystemClock.sleep(1500);
     }
 
     private class ScanTask {
@@ -287,7 +287,7 @@ public class YourService extends KiboRpcService {
             for (int i = 0; i < arucoIDs.rows(); i++) {
                 int id = (int) arucoIDs.get(i, 0)[0]-100;
 
-                if (id != areaNum) continue;
+//                if (id != areaNum) continue;
 
                 Mat tvec = tvecs.row(i);
                 Mat rvec = rvecs.row(i);
