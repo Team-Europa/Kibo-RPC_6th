@@ -298,8 +298,7 @@ public class YourService extends KiboRpcService {
                 double x = imagePoint.x;
                 double y = imagePoint.y;
 
-                double tx = x - 640;
-                double ty = y - 480;
+
 
 
                 api.saveMatImage(mat,id+"AIM.png");

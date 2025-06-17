@@ -90,10 +90,11 @@ public class Estimate {
         Core.perspectiveTransform(src, dst, H);
         Point projected = dst.toArray()[0];
 
-        // 回傳相對於背景中心的偏移
-        double dx = projected.x - bg.img.width() / 2.0;
-        double dy = projected.y - bg.img.height() / 2.0;
-        return new Point(dx, dy);
+        // 回傳相對於整張背景圖的比例座標
+        double ratioX = projected.x / bg.img.width();
+        double ratioY = projected.y / bg.img.height();
+
+        return new Point(ratioX, ratioY);
     }
 
     private Mat loadMatFromAssets(String fileName) {
