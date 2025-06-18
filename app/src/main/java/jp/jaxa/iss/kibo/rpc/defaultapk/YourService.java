@@ -158,7 +158,7 @@ public class YourService extends KiboRpcService {
                 long pastTime = System.currentTimeMillis();
 
                 if (ImageProcessUtils.areImgDiff(navImgPast, navImgNow)) {
-                    navImgPast = navImgNow;
+                    navImgPast = navImgNow.clone();
 
                     final Mat calibNavImg = ImageProcessUtils.calibCamImg(navImgNow, navCamParameter);
 
@@ -171,7 +171,7 @@ public class YourService extends KiboRpcService {
                 }
 
                 if (ImageProcessUtils.areImgDiff(dockImgPast, dockImgNow)) {
-                    dockImgPast = dockImgNow;
+                    dockImgPast = dockImgNow.clone();
 
                     final Mat calibDockImg = ImageProcessUtils.calibCamImg(dockImgNow, dockCamParameter);
 
@@ -219,7 +219,21 @@ public class YourService extends KiboRpcService {
         List<Mat> arucoCorners = new ArrayList<>();
         Mat arucoIDs = new Mat();
 
-        Aruco.detectMarkers(calibImg, Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250), arucoCorners, arucoIDs);
+        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250);
+        DetectorParameters parameters = DetectorParameters.create();
+
+        parameters.set_adaptiveThreshWinSizeMin(3);
+        parameters.set_adaptiveThreshWinSizeMax(23);
+        parameters.set_adaptiveThreshConstant(5);
+        parameters.set_minMarkerPerimeterRate(0.02f);
+        parameters.set_maxMarkerPerimeterRate(4.0f);
+        parameters.set_minDistanceToBorder(1);
+        parameters.set_cornerRefinementMethod(Aruco.CORNER_REFINE_SUBPIX);
+        parameters.set_cornerRefinementWinSize(5);
+        parameters.set_cornerRefinementMaxIterations(100);
+        parameters.set_cornerRefinementMinAccuracy(0.005f);
+
+        Aruco.detectMarkers(calibImg, dictionary, arucoCorners, arucoIDs, parameters);
 
         if(!arucoIDs.empty()) {
             Mat rvecs = new Mat();
@@ -346,6 +360,13 @@ public class YourService extends KiboRpcService {
                 }
 
                 pointAIMMap.put(id, projectedPoint);
+
+                Mat lostItemBoardImg = ImageProcessUtils.getWarpItemImg(mat, rvec, tvec, camParameter.arUcoCalibCamMatrix, camParameter.zeroDoubleDistCoeffs);
+                if (vision.isRunning()) {
+                    scanTaskQueue.put(new ScanTask(lostItemBoardImg.clone(), id));
+                } else {
+                    lostItemBoardImg.release();
+                }
 
                 api.saveMatImage(mat,id+"AIM.png");
             }
