@@ -427,6 +427,8 @@ public class YourService extends KiboRpcService {
 //
 
 //        SystemClock.sleep(3500);
+        if(areaNum==null){areaNum=-1;}
+
         Point targetP = pointAIMMap.get(areaNum);
         Quaternion targetQ;
 
