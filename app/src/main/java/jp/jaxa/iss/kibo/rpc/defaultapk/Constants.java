@@ -22,13 +22,18 @@ public class Constants {
             new Point(10.925, -9.525,4.685),
             new Quaternion(0.5f, 0.5f, 0.5f, 0.5f));
 
-    static final PointWithQuaternion area2 = new PointWithQuaternion(
-            new Point(11.175, -8.975,5.420),
-            new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
+//    static final PointWithQuaternion area2 = new PointWithQuaternion(
+//            new Point(11.175, -8.975,5.420),
+//            new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
+//
+//    static final PointWithQuaternion area3 = new PointWithQuaternion(
+//            new Point(10.700, -7.925,5.420),
+//            new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
 
-    static final PointWithQuaternion area3 = new PointWithQuaternion(
-            new Point(10.700, -7.925,5.420),
-            new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
+    static final PointWithQuaternion area23 = new PointWithQuaternion(
+            new Point(10.925, -8.5, 5.420),
+            new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f)
+    );
 
     static final PointWithQuaternion area4 = new PointWithQuaternion(
             new Point(11.410, -6.875,4.685),

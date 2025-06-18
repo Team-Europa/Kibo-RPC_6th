@@ -91,13 +91,18 @@ public class YourService extends KiboRpcService {
         SystemClock.sleep(scanSleepMillis);
         estimateAruco(Cam.DOCK, area1,1);
 
-        moveToWithRetry(area2, 10);
-        SystemClock.sleep(scanSleepMillis);
-        estimateAruco(Cam.NAV, area2,2);
+//        moveToWithRetry(area2, 10);
+//        SystemClock.sleep(scanSleepMillis);
+//        estimateAruco(Cam.NAV, area2,2);
+//
+//        moveToWithRetry(area3, 10);
+//        SystemClock.sleep(scanSleepMillis);
+//        estimateAruco(Cam.NAV, area3,3);
 
-        moveToWithRetry(area3, 10);
-        SystemClock.sleep(scanSleepMillis);
-        estimateAruco(Cam.NAV, area3,3);
+        moveToWithRetry(area23, 10);
+        SystemClock.sleep(2 * scanSleepMillis);
+        estimateAruco(Cam.NAV, area23, 2);
+        estimateAruco(Cam.NAV, area23, 3);
 
         moveToWithRetry(area4, 10);
         SystemClock.sleep(scanSleepMillis);
@@ -330,12 +335,15 @@ public class YourService extends KiboRpcService {
                 switch (id){
                     case 1:
                         projectedPoint = new Point(projectedPointY, targetY_area1, projectedPointX + 0.10);
+                        Log.i("EST", "Got projected world-frame point: (" + projectedPointY + ", " + targetY_area1 + ", " + (projectedPointX+0.10) + ")");
                         break;
                     case 2: case 3:
                         projectedPoint = new Point(projectedPointX, projectedPointY, targetZ_area23);
+                        Log.i("EST", "Got projected world-frame point: (" + projectedPointX + ", " + projectedPointY + ", " + targetZ_area23 + ")");
                         break;
                     default:
                         projectedPoint = new Point(targetX_area4, projectedPointY, projectedPointX);
+                        Log.i("EST", "Got projected world-frame point: (" + targetX_area4 + ", " + projectedPointY + ", " + projectedPointX + ")");
                         break;
                 }
 
