@@ -23,6 +23,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import gov.nasa.arc.astrobee.Kinematics;
 import gov.nasa.arc.astrobee.Result;
 import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
@@ -41,18 +42,9 @@ public class YourService extends KiboRpcService {
     private CamParameter navCamParameter = new CamParameter();
     private CamParameter dockCamParameter = new CamParameter();
     private ItemDetectorUtils itemDetectorUtils;
-    private QuaternionUtils quaternionUtils;
     private Estimate estimate;
     private Vision vision;
     private HashMap<Integer, Point> pointAIMMap = new HashMap<>();
-
-    private final PriorityBlockingQueue<ScanTask> scanTaskQueue =
-            new PriorityBlockingQueue<ScanTask>(11, new Comparator<ScanTask>() {
-                @Override
-                public int compare(ScanTask o1, ScanTask o2) {
-                    return Integer.compare(o1.getPriority(), o2.getPriority());
-                }
-            });
 
     private int saveImgNum = 0;
 
@@ -89,7 +81,7 @@ public class YourService extends KiboRpcService {
     private void scanTask(){
         moveToWithRetry(area1, 10);
         SystemClock.sleep(scanSleepMillis);
-        estimateAruco(Cam.DOCK, area1,1);
+        estimateAruco(Cam.DOCK, area1);
 
 //        moveToWithRetry(area2, 10);
 //        SystemClock.sleep(scanSleepMillis);
@@ -101,37 +93,13 @@ public class YourService extends KiboRpcService {
 
         moveToWithRetry(area23, 10);
         SystemClock.sleep(2 * scanSleepMillis);
-        estimateAruco(Cam.NAV, area23, 2);
-        estimateAruco(Cam.NAV, area23, 3);
+        estimateAruco(Cam.NAV, area23);
+        estimateAruco(Cam.NAV, area23);
 
         moveToWithRetry(area4, 10);
         SystemClock.sleep(scanSleepMillis);
-        estimateAruco(Cam.DOCK, area4,4);
+        estimateAruco(Cam.DOCK, area4);
         SystemClock.sleep(1500);
-    }
-
-    private class ScanTask {
-        private final Mat image;
-        private final int areaId;
-        private final int priority;
-
-        ScanTask(Mat image, int areaId) {
-            this.image = image;
-            this.areaId = areaId;
-            this.priority = itemDetectorUtils.getScanCountForArea(areaId);
-        }
-
-        int getPriority() {
-            return priority;
-        }
-
-        void process() {
-            try {
-                itemDetectorUtils.scanItemBoard(image, areaId);
-            } finally {
-                image.release();
-            }
-        }
     }
 
     class Vision implements Runnable {
@@ -142,23 +110,20 @@ public class YourService extends KiboRpcService {
             running = false;
         }
 
-        public boolean isRunning() {
-            return running;
-        }
-
         @Override
         public void run() {
             Mat navImgPast = api.getMatNavCam();
             Mat dockImgPast = api.getMatDockCam();
 
             while (running && !Thread.currentThread().isInterrupted()) {
-                final Mat navImgNow = api.getMatNavCam();
-                final Mat dockImgNow = api.getMatDockCam();
+                Mat navImgNow = api.getMatNavCam();
+                Mat dockImgNow = api.getMatDockCam();
 
+                final Kinematics robotNowKinematics = api.getRobotKinematics();
                 long pastTime = System.currentTimeMillis();
 
                 if (ImageProcessUtils.areImgDiff(navImgPast, navImgNow)) {
-                    navImgPast = navImgNow.clone();
+                    navImgPast = navImgNow;
 
                     final Mat calibNavImg = ImageProcessUtils.calibCamImg(navImgNow, navCamParameter);
 
@@ -171,7 +136,7 @@ public class YourService extends KiboRpcService {
                 }
 
                 if (ImageProcessUtils.areImgDiff(dockImgPast, dockImgNow)) {
-                    dockImgPast = dockImgNow.clone();
+                    dockImgPast = dockImgNow;
 
                     final Mat calibDockImg = ImageProcessUtils.calibCamImg(dockImgNow, dockCamParameter);
 
@@ -183,13 +148,6 @@ public class YourService extends KiboRpcService {
                     });
                 }
 
-                while (!scanTaskQueue.isEmpty()) {
-                    ScanTask task = scanTaskQueue.poll();
-                    if (task != null) {
-                        task.process();
-                    }
-                }
-
                 try {
                     long processingTime = System.currentTimeMillis() - pastTime;
                     Thread.sleep(100);
@@ -198,8 +156,8 @@ public class YourService extends KiboRpcService {
                     break;
                 }
             }
-
             executorService.shutdown();
+            // Wait for mission complete and close executorService correctly
             try {
                 if (!executorService.awaitTermination(visionThread_stoppingLatency, TimeUnit.SECONDS)){
                     executorService.shutdownNow();
@@ -252,19 +210,14 @@ public class YourService extends KiboRpcService {
                     api.saveMatImage(lostItemBoardImg,"image_" + saveImgNum + ".png");
                     saveImgNum++;
 
-                    if (vision.isRunning()) {
-                        scanTaskQueue.put(new ScanTask(lostItemBoardImg.clone(), id));
-                    } else {
-                        lostItemBoardImg.release();
-                    }
-                } else {
-                    Log.i("lostItemBoardImg","lostItemBoardImg is null");
-                }
+                    itemDetectorUtils.scanItemBoard(lostItemBoardImg, id);
+
+                }else{Log.i("lostItemBoardImg","lostItemBoardImg is null");}
             }
         }
     }
 
-    private void estimateAruco(Cam cam, PointWithQuaternion robotPQ, Integer areaNum){
+    private void estimateAruco(Cam cam, PointWithQuaternion robotPQ){
         Mat mat;
         CamParameter camParameter;
 
@@ -365,11 +318,14 @@ public class YourService extends KiboRpcService {
                 pointAIMMap.put(id, projectedPoint);
 
                 Mat lostItemBoardImg = ImageProcessUtils.getWarpItemImg(mat, rvec, tvec, camParameter.arUcoCalibCamMatrix, camParameter.zeroDoubleDistCoeffs);
-                if (vision.isRunning()) {
-                    scanTaskQueue.put(new ScanTask(lostItemBoardImg.clone(), id));
-                } else {
-                    lostItemBoardImg.release();
-                }
+
+                if(lostItemBoardImg != null){
+                    api.saveMatImage(lostItemBoardImg,"image_" + saveImgNum + ".png");
+                    saveImgNum++;
+
+                    itemDetectorUtils.scanItemBoard(lostItemBoardImg, id);
+
+                }else{Log.i("lostItemBoardImg","lostItemBoardImg is null");}
 
                 api.saveMatImage(mat,id+"AIM.png");
             }

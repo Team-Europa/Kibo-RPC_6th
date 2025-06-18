@@ -63,20 +63,20 @@ public class Constants {
 
     public static final Map<Integer, Integer> TREASURE_MAPPING = new HashMap<>();
     static {
-        TREASURE_MAPPING.put(5, 0);
-        TREASURE_MAPPING.put(6, 1);
-        TREASURE_MAPPING.put(7, 2);
+        TREASURE_MAPPING.put(4, 0);
+        TREASURE_MAPPING.put(5, 1);
+        TREASURE_MAPPING.put(6, 2);
     }
 
     public static final Map<Integer, Integer> LANDMARK_MAPPING = new HashMap<>();
     static {
-        LANDMARK_MAPPING.put(1, 0);
-        LANDMARK_MAPPING.put(2, 1);
-        LANDMARK_MAPPING.put(3, 2);
-        LANDMARK_MAPPING.put(4, 3);
-        LANDMARK_MAPPING.put(8, 4);
-        LANDMARK_MAPPING.put(9, 5);
-        LANDMARK_MAPPING.put(10, 6);
-        LANDMARK_MAPPING.put(11, 7);
+        LANDMARK_MAPPING.put(0, 0);
+        LANDMARK_MAPPING.put(1, 1);
+        LANDMARK_MAPPING.put(2, 2);
+        LANDMARK_MAPPING.put(3, 3);
+        LANDMARK_MAPPING.put(7, 4);
+        LANDMARK_MAPPING.put(8, 5);
+        LANDMARK_MAPPING.put(9, 6);
+        LANDMARK_MAPPING.put(10, 7);
     }
 }
