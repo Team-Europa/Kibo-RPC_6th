@@ -304,12 +304,12 @@ public class YourService extends KiboRpcService {
                     case 1:
                         projectedPoint = new Point(projectedPointY, targetY_area1, projectedPointX);
                         break;
-                    case 2:
+                    case 2: case 3:
                         projectedPoint = new Point(projectedPointX, projectedPointY, targetZ_area23);
                         break;
-                    case 3:
-                        projectedPoint = new Point(projectedPointX + 0.10, projectedPointY, targetZ_area23);
-                        break;
+//                    case 3:
+//                        projectedPoint = new Point(projectedPointX + 0.10, projectedPointY, targetZ_area23);
+//                        break;
                     default:
                         projectedPoint = new Point(targetX_area4, projectedPointY, projectedPointX); // offset ok
                         break;
@@ -451,8 +451,62 @@ public class YourService extends KiboRpcService {
 //                moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - target.getY(), robotPos.getZ() - target.getX()), new Quaternion(0f,0f,-1f,0f)),1);
 //            }
         }else{
-            Log.e("EST", "Unable to reach Area" + areaNum + ", because the estimated point is null.");
+            Log.i("EST", "Use plan B because the estimated point is null.");
+            switch (areaNum){
+                case 1:
+                    moveToWithRetry(targetPQ_area1, 5);
+                    break;
+                case 2:
+                    moveToWithRetry(targetPQ_area2, 5);
+                    break;
+                case 3:
+                    moveToWithRetry(targetPQ_area3, 5);
+                    break;
+                default:
+                    moveToWithRetry(targetPQ_area4, 5);
+                    break;
+            }
+
+            Point robotPos = api.getRobotKinematics().getPosition();
+            SystemClock.sleep(3500);
+            Point error = calcArucoPos(ImageProcessUtils.calibCamImg(api.getMatNavCam(), navCamParameter), areaNum);
+            if(error != null){
+                if(areaNum == 2||areaNum == 3){
+                    moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), robotPos.getY() - error.getY(), targetZ_area23), new Quaternion(0.5f, 0.5f, -0.5f, 0.5f)),5);
+                }else if(areaNum == 1){
+                    moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), targetY_area1, robotPos.getZ() + error.getY()), new Quaternion(0f, 0f, -0.707f, 0.707f)),5);
+                }else {
+                    moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - error.getX(), robotPos.getZ() + error.getY()), new Quaternion(0f,0f,-1f,0f)),5);
+                }
+            }
         }
         api.takeTargetItemSnapshot();
+    }
+
+    private Point calcArucoPos(Mat img, Integer targetAreaNum) {
+        List<Mat> arucoCorners = new ArrayList<>();
+        Mat arucoIDs = new Mat();
+
+        Aruco.detectMarkers(img, Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250), arucoCorners, arucoIDs);
+
+        if(!arucoIDs.empty()) {
+            Mat rvecs = new Mat();
+            Mat tvecs = new Mat();
+            Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, navCamParameter.arUcoCalibCamMatrix, navCamParameter.zeroDoubleDistCoeffs, rvecs, tvecs);
+
+            for (int i = 0; i < arucoIDs.rows(); i++) {
+                int id = (int) arucoIDs.get(i, 0)[0]-100;
+                if(id != targetAreaNum){continue;}
+                Mat tvec = tvecs.row(i);
+
+                double[] tvecArray = tvec.get(0, 0);
+                double tx = tvecArray[0];
+                double ty = tvecArray[1];
+                double tz = tvecArray[2];
+
+                return new Point(tx, ty, tz);
+            }
+        }
+        return null;
     }
 }
