@@ -59,5 +59,4 @@ dependencies {
         exclude group: 'junit'
     }
     implementation 'com.quickbirdstudios:opencv-contrib:4.5.3.0'
-    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.11.0'
 }
