@@ -352,7 +352,7 @@ public class YourService extends KiboRpcService {
                         projectedPoint = new Point(projectedPointY, targetY_area1, projectedPointX);
                         break;
                     case 2:
-                        projectedPoint = new Point(projectedPointX + 0.20, projectedPointY + 0.10, targetZ_area23);
+                        projectedPoint = new Point(projectedPointX, projectedPointY, targetZ_area23);
                         break;
                     case 3:
                         projectedPoint = new Point(projectedPointX + 0.10, projectedPointY, targetZ_area23);
