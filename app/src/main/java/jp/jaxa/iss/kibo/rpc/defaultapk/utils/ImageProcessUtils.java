@@ -45,12 +45,11 @@ public class ImageProcessUtils {
     }
 
     public static Mat getWarpItemImg(Mat originImg, Mat rvec, Mat tvec, Mat cameraMatrix, MatOfDouble doubleDistCoeffs){
-
         MatOfPoint3f itemBoardWorldPoint = new MatOfPoint3f(
-                new Point3(-0.2325, 0.0375, 0),
-                new Point3(-0.2325, -0.1125, 0),
-                new Point3(-0.0325, -0.1125, 0),
-                new Point3(-0.0325, 0.0375, 0));
+                new Point3(-0.2325 - 0.0135, 0.0375 + 0.03, 0),
+                new Point3(-0.2325 - 0.0135, -0.1125 - 0.03, 0),
+                new Point3(-0.0325 + 0.0125, -0.1125 - 0.03, 0),
+                new Point3(-0.0325 + 0.0125, 0.0375 + 0.03, 0));
 
         MatOfPoint2f itemBoardImagePoints = new MatOfPoint2f();
 
