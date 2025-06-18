@@ -349,7 +349,7 @@ public class YourService extends KiboRpcService {
 
                 switch (id){
                     case 1:
-                        projectedPoint = new Point(projectedPointY, targetY_area1, projectedPointX + 0.5);
+                        projectedPoint = new Point(projectedPointY, targetY_area1, projectedPointX);
                         break;
                     case 2: case 3:
                         projectedPoint = new Point(projectedPointX + 0.10, projectedPointY, targetZ_area23);
