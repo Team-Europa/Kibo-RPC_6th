@@ -91,8 +91,7 @@ public class ItemDetectorUtils {
     }
 
     public String detectRecognizedResult(Bitmap bitmap){
-        yolo11Ncnn.loadModel(assetManager, 0, 3, 0);
-        DetectionResult result = yolo11Ncnn.detectObjects(bitmap)[0];
+        DetectionResult result = reMappingTreasureData(yolo11Ncnn.detectObjects(bitmap))[0];
         if(result !=null){ return  treasure_items[result.label]; }
         return null;
     }
