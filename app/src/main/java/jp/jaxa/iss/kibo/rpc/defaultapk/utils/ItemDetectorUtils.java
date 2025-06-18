@@ -29,7 +29,7 @@ public class ItemDetectorUtils {
 
     public ItemDetectorUtils(Context context) {
         this.assetManager = context.getAssets();
-        yolo11Ncnn.loadModel(assetManager, 0, 0, 0);
+        yolo11Ncnn.loadModel(assetManager, 0, 4, 0);
     }
 
     private void detectTreasureItem(DetectionResult[] treasureDetectionResults, Integer areaNum){
