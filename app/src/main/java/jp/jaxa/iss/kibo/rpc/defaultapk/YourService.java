@@ -307,6 +307,7 @@ public class YourService extends KiboRpcService {
                 double y = imagePoint.y;
 
                 org.opencv.core.Point projectedPointRatio = estimate.computeProjectedPoint(mat, new org.opencv.core.Point(x,y), id);
+                Log.i("EST","Estimated area " + id + " with ratio: (" + projectedPointRatio.x + ", " + projectedPointRatio.y + ").");
                 org.opencv.core.Point targetOrigin, targetMax;
 
                 switch (id){
@@ -334,16 +335,13 @@ public class YourService extends KiboRpcService {
 
                 switch (id){
                     case 1:
-                        projectedPoint = new Point(projectedPointY, targetY_area1, projectedPointX + 0.10);
-                        Log.i("EST", "Got projected world-frame point: (" + projectedPointY + ", " + targetY_area1 + ", " + (projectedPointX+0.10) + ")");
+                        projectedPoint = new Point(projectedPointY, targetY_area1, projectedPointX + 0.5);
                         break;
                     case 2: case 3:
-                        projectedPoint = new Point(projectedPointX, projectedPointY, targetZ_area23);
-                        Log.i("EST", "Got projected world-frame point: (" + projectedPointX + ", " + projectedPointY + ", " + targetZ_area23 + ")");
+                        projectedPoint = new Point(projectedPointX + 0.10, projectedPointY, targetZ_area23);
                         break;
                     default:
-                        projectedPoint = new Point(targetX_area4, projectedPointY, projectedPointX);
-                        Log.i("EST", "Got projected world-frame point: (" + targetX_area4 + ", " + projectedPointY + ", " + projectedPointX + ")");
+                        projectedPoint = new Point(targetX_area4, projectedPointY, projectedPointX); // offset ok
                         break;
                 }
 
@@ -463,6 +461,7 @@ public class YourService extends KiboRpcService {
                 default:
                     targetQ = new Quaternion(0f,0f,-1f,0f);
             }
+            Log.i("EST", "Estimated point: " + targetP + "; Quaternion:" + targetQ);
             moveToWithRetry(new PointWithQuaternion(targetP, targetQ), 1);
 //            if(areaNum == 2||areaNum == 3){
 //                moveToWithRetry(new PointWithQuaternion(target, new Quaternion(0.5f, 0.5f, -0.5f, 0.5f)),1);
@@ -471,6 +470,8 @@ public class YourService extends KiboRpcService {
 //            }else {
 //                moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - target.getY(), robotPos.getZ() - target.getX()), new Quaternion(0f,0f,-1f,0f)),1);
 //            }
+        }else{
+            Log.e("EST", "Unable to reach Area" + areaNum + ", because the estimated point is null.");
         }
         api.takeTargetItemSnapshot();
     }
