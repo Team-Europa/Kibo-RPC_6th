@@ -264,7 +264,7 @@ public class YourService extends KiboRpcService {
                 Mat tvec = tvecs.row(i);
                 Mat rvec = rvecs.row(i);
 
-                MatOfPoint3f itemBoardWorldPoint = new MatOfPoint3f(new Point3(-0.1325, -0.0375, 0));
+                MatOfPoint3f itemBoardWorldPoint = new MatOfPoint3f(new Point3(-0.0975, -0.0375, 0));
                 MatOfPoint2f itemBoardImagePoints = new MatOfPoint2f();
 
                 Calib3d.projectPoints(itemBoardWorldPoint, rvec, tvec, camParameter.camMatrix, camParameter.zeroDoubleDistCoeffs, itemBoardImagePoints);
