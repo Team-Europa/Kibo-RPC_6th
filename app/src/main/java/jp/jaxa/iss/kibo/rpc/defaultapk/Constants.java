@@ -15,7 +15,7 @@ public class Constants {
 
     static final int visionThread_stoppingLatency = 20;
     static final long scanSleepMillis1 = 0;
-    static final long scanSleepMillis23 = 10000;
+    static final long scanSleepMillis23 = 15000;
     static final long scanSleepMillis4 = 0;
 
     public enum Cam {NAV, DOCK}
@@ -42,13 +42,13 @@ public class Constants {
             new Quaternion(0.707f, 0f, 0f, 0.707f));
 
     static final org.opencv.core.Point area1Origin = new org.opencv.core.Point(4.82, 10.42);
-    static final org.opencv.core.Point area2Origin = new org.opencv.core.Point(11.55, -9.25);
-    static final org.opencv.core.Point area3Origin = new org.opencv.core.Point(11.55, -8.4);
+    static final org.opencv.core.Point area2Origin = new org.opencv.core.Point(10.3, -9.25);
+    static final org.opencv.core.Point area3Origin = new org.opencv.core.Point(10.3, -8.4);
     static final org.opencv.core.Point area4Origin = new org.opencv.core.Point(5.57, -6.365);
 
     static final org.opencv.core.Point area1Max = new org.opencv.core.Point(5.57, 11.48);
-    static final org.opencv.core.Point area2Max = new org.opencv.core.Point(10.3,-8.5);
-    static final org.opencv.core.Point area3Max = new org.opencv.core.Point(10.3,-7.45);
+    static final org.opencv.core.Point area2Max = new org.opencv.core.Point(11.55,-8.5);
+    static final org.opencv.core.Point area3Max = new org.opencv.core.Point(11.55,-7.45);
     static final org.opencv.core.Point area4Max = new org.opencv.core.Point(4.32, -7.34);
 
     static final Double[] navCamDistFromCenter = {-0.0422, -0.0826, 0.1177};
