@@ -479,7 +479,7 @@ public class YourService extends KiboRpcService {
                         moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), targetY_area1, robotPos.getZ() + error.getY()), targetQ),1);
                         break;
                     case 2: case 3:
-                        moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), robotPos.getY() - error.getY(), targetZ_area23), targetQ),1);
+                        moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() - error.getX(), robotPos.getY() + error.getY(), targetZ_area23), targetQ),1);
                         break;
                     default:
                         moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - error.getX(), robotPos.getZ() + error.getY()), targetQ),1);
