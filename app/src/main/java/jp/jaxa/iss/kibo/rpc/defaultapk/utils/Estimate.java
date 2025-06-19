@@ -91,17 +91,24 @@ public class Estimate {
         Point projected = dst.toArray()[0];
 
         // 回傳相對於整張背景圖的比例座標
-        double ratioX = projected.x / bg.img.width();
+        double ratioX;
         double ratioY;
 
         switch(areaNum){
+            case 1:
+                ratioX = (projected.x + 110) / (bg.img.width() + 110);
+                ratioY = projected.y / bg.img.height();
+                break;
             case 2:
+                ratioX = projected.x / bg.img.width();
                 ratioY = projected.y / (bg.img.height() - 325);
                 break;
             case 3:
+                ratioX = projected.x / bg.img.width();
                 ratioY = (projected.y - 280) / (bg.img.height() - 280);
                 break;
             default:
+                ratioX = projected.x / bg.img.height();
                 ratioY = projected.y / bg.img.height();
         }
 
