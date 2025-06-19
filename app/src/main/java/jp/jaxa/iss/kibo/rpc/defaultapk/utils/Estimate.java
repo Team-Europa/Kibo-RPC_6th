@@ -101,7 +101,7 @@ public class Estimate {
                 break;
             case 2:
                 ratioX = projected.x / bg.img.width();
-                ratioY = projected.y / (bg.img.height() - 325);
+                ratioY = projected.y / (bg.img.height() - 280);
                 break;
             case 3:
                 ratioX = projected.x / bg.img.width();
