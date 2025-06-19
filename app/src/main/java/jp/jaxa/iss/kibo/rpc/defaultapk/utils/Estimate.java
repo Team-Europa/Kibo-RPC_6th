@@ -98,6 +98,9 @@ public class Estimate {
             case 2:
                 ratioY = projected.y / (bg.img.height() - 325);
                 break;
+            case 3:
+                ratioY = (projected.y - 280) / (bg.img.height() - 280);
+                break;
             default:
                 ratioY = projected.y / bg.img.height();
         }
