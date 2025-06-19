@@ -431,18 +431,19 @@ public class YourService extends KiboRpcService {
 
         Point targetP = pointAIMMap.get(areaNum);
         Quaternion targetQ;
+        switch(areaNum){
+            case 1:
+                targetQ = new Quaternion(0f, 0f, -0.707f, 0.707f);
+                break;
+            case 2: case 3:
+                targetQ = new Quaternion(0.5f, -0.5f, -0.5f, -0.5f);
+                break;
+            default:
+                targetQ = new Quaternion(0f,0f,-1f,0f);
+        }
 
         if(targetP != null){
-            switch(areaNum){
-                case 1:
-                    targetQ = new Quaternion(0f, 0f, -0.707f, 0.707f);
-                    break;
-                case 2: case 3:
-                    targetQ = new Quaternion(0.5f, -0.5f, -0.5f, -0.5f);
-                    break;
-                default:
-                    targetQ = new Quaternion(0f,0f,-1f,0f);
-            }
+
             Log.i("EST", "Estimated point: " + targetP + "; Quaternion:" + targetQ);
             moveToWithRetry(new PointWithQuaternion(targetP, targetQ), 1);
 //            if(areaNum == 2||areaNum == 3){
@@ -473,13 +474,23 @@ public class YourService extends KiboRpcService {
             SystemClock.sleep(3500);
             Point error = calcArucoPos(ImageProcessUtils.calibCamImg(api.getMatNavCam(), navCamParameter), areaNum);
             if(error != null){
-                if(areaNum == 2||areaNum == 3){
-                    moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), robotPos.getY() - error.getY(), targetZ_area23), new Quaternion(0.5f, 0.5f, -0.5f, 0.5f)),5);
-                }else if(areaNum == 1){
-                    moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), targetY_area1, robotPos.getZ() + error.getY()), new Quaternion(0f, 0f, -0.707f, 0.707f)),5);
-                }else {
-                    moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - error.getX(), robotPos.getZ() + error.getY()), new Quaternion(0f,0f,-1f,0f)),5);
+                switch(areaNum){
+                    case 1:
+                        moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), targetY_area1, robotPos.getZ() + error.getY()), targetQ),1);
+                        break;
+                    case 2: case 3:
+                        moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), robotPos.getY() - error.getY(), targetZ_area23), targetQ),1);
+                        break;
+                    default:
+                        moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - error.getX(), robotPos.getZ() + error.getY()), targetQ),1);
                 }
+//                if(areaNum == 2||areaNum == 3){
+//                    moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), robotPos.getY() - error.getY(), targetZ_area23), new Quaternion(0.5f, 0.5f, -0.5f, 0.5f)),5);
+//                }else if(areaNum == 1){
+//                    moveToWithRetry(new PointWithQuaternion(new Point(robotPos.getX() + error.getX(), targetY_area1, robotPos.getZ() + error.getY()), new Quaternion(0f, 0f, -0.707f, 0.707f)),5);
+//                }else {
+//                    moveToWithRetry(new PointWithQuaternion(new Point(targetX_area4, robotPos.getY() - error.getX(), robotPos.getZ() + error.getY()), new Quaternion(0f,0f,-1f,0f)),5);
+//                }
             }
         }
         api.takeTargetItemSnapshot();

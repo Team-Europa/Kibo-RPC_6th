@@ -15,7 +15,7 @@ public class Constants {
 
     static final int visionThread_stoppingLatency = 20;
     static final long scanSleepMillis1 = 0;
-    static final long scanSleepMillis23 = 15000;
+    static final long scanSleepMillis23 = 7500;
     static final long scanSleepMillis4 = 0;
 
     public enum Cam {NAV, DOCK}
