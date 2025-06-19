@@ -15,12 +15,10 @@ import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point3;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import gov.nasa.arc.astrobee.Kinematics;
@@ -28,14 +26,39 @@ import gov.nasa.arc.astrobee.Result;
 import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
+import jp.jaxa.iss.kibo.rpc.defaultapk.model.PointWithQuaternion;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.CamParameter;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.Estimate;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ImageProcessUtils;
-import jp.jaxa.iss.kibo.rpc.defaultapk.model.PointWithQuaternion;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ItemDetectorUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils;
 
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.Cam;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area1;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area1Max;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area1Origin;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area23;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area2Max;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area2Origin;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area3Max;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area3Origin;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area4;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area4Max;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area4Origin;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.astronautPQ;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.dockCamDistFromCenter;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.navCamDistFromCenter;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.scanSleepMillis1;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.scanSleepMillis23;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.scanSleepMillis4;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetPQ_area1;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetPQ_area2;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetPQ_area3;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetPQ_area4;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetX_area4;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetY_area1;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetZ_area23;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.visionThread_stoppingLatency;
 import static jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils.quaternionConjugate;
 
 public class YourService extends KiboRpcService {
