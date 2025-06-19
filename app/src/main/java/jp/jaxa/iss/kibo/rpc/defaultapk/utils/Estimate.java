@@ -92,7 +92,15 @@ public class Estimate {
 
         // 回傳相對於整張背景圖的比例座標
         double ratioX = projected.x / bg.img.width();
-        double ratioY = projected.y / bg.img.height();
+        double ratioY;
+
+        switch(areaNum){
+            case 2:
+                ratioY = projected.y / (bg.img.height() - 325);
+                break;
+            default:
+                ratioY = projected.y / bg.img.height();
+        }
 
         return new Point(ratioX, ratioY);
     }

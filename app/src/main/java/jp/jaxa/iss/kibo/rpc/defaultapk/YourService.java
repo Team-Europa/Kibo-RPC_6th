@@ -308,7 +308,7 @@ public class YourService extends KiboRpcService {
                         projectedPoint = new Point(projectedPointX, projectedPointY, targetZ_area23);
                         break;
 //                    case 3:
-//                        projectedPoint = new Point(projectedPointX + 0.10, projectedPointY, targetZ_area23);
+//                        projectedPoint = new Point(projectedPointX, projectedPointY, targetZ_area23);
 //                        break;
                     default:
                         projectedPoint = new Point(targetX_area4, projectedPointY, projectedPointX); // offset ok
