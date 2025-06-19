@@ -14,7 +14,9 @@ public class Constants {
                     new Quaternion(0f, 0f, 0.707f, 0.707f));
 
     static final int visionThread_stoppingLatency = 20;
-    static final long scanSleepMillis = 0; // TODO: Further test for min delay time.
+    static final long scanSleepMillis1 = 0;
+    static final long scanSleepMillis23 = 5000;
+    static final long scanSleepMillis4 = 0;
 
     public enum Cam {NAV, DOCK}
 

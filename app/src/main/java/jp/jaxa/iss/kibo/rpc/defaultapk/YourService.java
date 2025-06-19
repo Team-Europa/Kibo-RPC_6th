@@ -80,7 +80,7 @@ public class YourService extends KiboRpcService {
 
     private void scanTask(){
         moveToWithRetry(area1, 10);
-        SystemClock.sleep(scanSleepMillis);
+        SystemClock.sleep(scanSleepMillis1);
         estimateAruco(Cam.DOCK, area1);
 
 //        moveToWithRetry(area2, 10);
@@ -92,12 +92,12 @@ public class YourService extends KiboRpcService {
 //        estimateAruco(Cam.NAV, area3,3);
 
         moveToWithRetry(area23, 10);
-        SystemClock.sleep(2 * scanSleepMillis);
+        SystemClock.sleep(2 * scanSleepMillis23);
         estimateAruco(Cam.NAV, area23);
         estimateAruco(Cam.NAV, area23);
 
         moveToWithRetry(area4, 10);
-        SystemClock.sleep(scanSleepMillis);
+        SystemClock.sleep(scanSleepMillis4);
         estimateAruco(Cam.DOCK, area4);
         SystemClock.sleep(1500);
     }
