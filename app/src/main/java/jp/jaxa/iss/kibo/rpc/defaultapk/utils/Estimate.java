@@ -96,7 +96,7 @@ public class Estimate {
 
         switch(areaNum){
             case 1:
-                ratioX = (projected.x + 110) / (bg.img.width() + 110);
+                ratioX = projected.x / (bg.img.width() + 330);
                 ratioY = projected.y / bg.img.height();
                 break;
             case 2:
