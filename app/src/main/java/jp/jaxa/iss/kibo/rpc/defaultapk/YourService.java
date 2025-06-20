@@ -33,33 +33,8 @@ import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ImageProcessUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.ItemDetectorUtils;
 import jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils;
 
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.Cam;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area1;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area1Max;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area1Origin;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area23;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area2Max;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area2Origin;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area3Max;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area3Origin;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area4;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area4Max;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.area4Origin;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.astronautPQ;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.dockCamDistFromCenter;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.navCamDistFromCenter;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.scanSleepMillis1;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.scanSleepMillis23;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.scanSleepMillis4;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetPQ_area1;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetPQ_area2;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetPQ_area3;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetPQ_area4;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetX_area4;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetY_area1;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.targetZ_area23;
-import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.visionThread_stoppingLatency;
 import static jp.jaxa.iss.kibo.rpc.defaultapk.utils.QuaternionUtils.quaternionConjugate;
+import static jp.jaxa.iss.kibo.rpc.defaultapk.Constants.*;
 
 public class YourService extends KiboRpcService {
     private CamParameter navCamParameter = new CamParameter();
@@ -295,8 +270,8 @@ public class YourService extends KiboRpcService {
                         targetMax = area1Max;
                         break;
                     case 2: case 3:
-                        targetOrigin = area2Origin;
-                        targetMax = area3Max;
+                        targetOrigin = area2_3Origin;
+                        targetMax = area2_3Max;
                         break;
                     default:
                         targetOrigin = area4Origin;
