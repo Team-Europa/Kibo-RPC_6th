@@ -326,26 +326,51 @@ public class YourService extends KiboRpcService {
                         targetMax = area4Max;
                 }
 
-                double projectedPointX = targetOrigin.x + ( (targetMax.x - targetOrigin.x ) * projectedPointRatio.x);
-                double projectedPointY = targetOrigin.y + ( (targetMax.y - targetOrigin.y ) * projectedPointRatio.y);
+                double projectedPointX = targetOrigin.x
+                        + ( (targetMax.x - targetOrigin.x ) * projectedPointRatio.x);
+                double projectedPointY = targetOrigin.y
+                        + ( (targetMax.y - targetOrigin.y ) * projectedPointRatio.y);
 
                 Point projectedPoint;
 
                 switch (id){
                     case 1:
-                        projectedPoint = new Point(projectedPointY, targetY_area1, projectedPointX);
+                        if (projectedPointX + 0.1 < targetMax.x)
+                            projectedPoint = new Point(
+                                    projectedPointY,
+                                    targetY_area1,
+                                    projectedPointX + 0.1
+                            );
+                        else
+                            projectedPoint = new Point(
+                                    projectedPointY,
+                                    targetY_area1,
+                                    projectedPointX);
+
                         break;
                     case 2: case 3:
-                        projectedPoint = new Point(projectedPointX, projectedPointY, targetZ_area23);
+                        projectedPoint = new Point(
+                                projectedPointX,
+                                projectedPointY,
+                                targetZ_area23);
                         break;
                     default:
-                        projectedPoint = new Point(targetX_area4, projectedPointY, projectedPointX); // offset ok
+                        projectedPoint = new Point(targetX_area4,
+                                projectedPointY,
+                                projectedPointX
+                        ); // offset ok
                         break;
                 }
 
                 pointAIMMap.put(id, projectedPoint);
 
-                Mat lostItemBoardImg = ImageProcessUtils.getWarpItemImg(mat, rvec, tvec, camParameter.arUcoCalibCamMatrix, camParameter.zeroDoubleDistCoeffs);
+                Mat lostItemBoardImg = ImageProcessUtils.getWarpItemImg(
+                        mat,
+                        rvec,
+                        tvec,
+                        camParameter.arUcoCalibCamMatrix,
+                        camParameter.zeroDoubleDistCoeffs
+                );
 
                 if(lostItemBoardImg != null){
                     api.saveMatImage(lostItemBoardImg,"image_" + saveImgNum + ".png");
@@ -386,7 +411,8 @@ public class YourService extends KiboRpcService {
         result = api.moveTo(point, quaternion, false);
         Quaternion currentQuaternion = api.getRobotKinematics().getOrientation();
         int loopCounter = 0;
-        while (QuaternionUtils.calculateAngle(currentQuaternion, quaternion) <= MAX_THRESHOLD_Angle && loopCounter < loopMAX_time) {
+        while (QuaternionUtils.calculateAngle(currentQuaternion, quaternion) <= MAX_THRESHOLD_Angle
+                        && loopCounter < loopMAX_time) {
             result = api.moveTo(point, quaternion, false);
             ++loopCounter;
         }
@@ -418,7 +444,11 @@ public class YourService extends KiboRpcService {
             if(!arucoIDs.empty()) {
                 Mat rvecs = new Mat();
                 Mat tvecs = new Mat();
-                Aruco.estimatePoseSingleMarkers(arucoCorners, 0.05f, navCamParameter.arUcoCalibCamMatrix, navCamParameter.zeroDistCoeffs, rvecs, tvecs);
+                Aruco.estimatePoseSingleMarkers(
+                        arucoCorners,
+                        0.05f,
+                        navCamParameter.arUcoCalibCamMatrix,
+                        navCamParameter.zeroDistCoeffs, rvecs, tvecs);
 
                 for (int i = 0; i < arucoIDs.rows(); i++) {
                     int id = (int) arucoIDs.get(i, 0)[0]-100;
@@ -426,9 +456,18 @@ public class YourService extends KiboRpcService {
                     Mat rvec = rvecs.row(i);
                     Mat tvec = tvecs.row(i);
 
-                    Mat recognizeItemBoardImg = ImageProcessUtils.getWarpItemImg(img, rvec, tvec, navCamParameter.arUcoCalibCamMatrix, navCamParameter.zeroDoubleDistCoeffs);
-                    Bitmap recognizeItemBoardBitmap = ImageProcessUtils.getBitmapFromMat(recognizeItemBoardImg);
-                    String targetItem = itemDetectorUtils.detectRecognizedResult(recognizeItemBoardBitmap);
+                    Mat recognizeItemBoardImg = ImageProcessUtils.getWarpItemImg(
+                            img,
+                            rvec,
+                            tvec,
+                            navCamParameter.arUcoCalibCamMatrix,
+                            navCamParameter.zeroDoubleDistCoeffs
+                    );
+
+                    Bitmap recognizeItemBoardBitmap
+                            = ImageProcessUtils.getBitmapFromMat(recognizeItemBoardImg);
+                    String targetItem
+                            = itemDetectorUtils.detectRecognizedResult(recognizeItemBoardBitmap);
                     if(targetItem != null){ return targetItem; }
                 }
             }
