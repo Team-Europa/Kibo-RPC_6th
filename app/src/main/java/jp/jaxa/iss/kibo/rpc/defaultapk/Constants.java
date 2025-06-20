@@ -14,23 +14,15 @@ public class Constants {
                     new Quaternion(0f, 0f, 0.707f, 0.707f));
 
     static final int visionThread_stoppingLatency = 20;
-    static final long scanSleepMillis1 = 0;
-    static final long scanSleepMillis23 = 7500;
-    static final long scanSleepMillis4 = 0;
+    static final long scanSleepMillis1 = 5000;
+    static final long scanSleepMillis23 = 5000;
+    static final long scanSleepMillis4 = 5000;
 
     public enum Cam {NAV, DOCK}
 
     static final PointWithQuaternion area1 = new PointWithQuaternion(
             new Point(10.925, -9.525,4.685),
             new Quaternion(0.5f, 0.5f, 0.5f, 0.5f));
-
-//    static final PointWithQuaternion area2 = new PointWithQuaternion(
-//            new Point(11.175, -8.975,5.420),
-//            new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
-//
-//    static final PointWithQuaternion area3 = new PointWithQuaternion(
-//            new Point(10.700, -7.925,5.420),
-//            new Quaternion(-0.5f, 0.5f, 0.5f, 0.5f));
 
     static final PointWithQuaternion area23 = new PointWithQuaternion(
             new Point(10.925, -8.5, 5.420),
@@ -54,7 +46,7 @@ public class Constants {
     static final Double[] navCamDistFromCenter = {-0.0422, -0.0826, 0.1177};
     static final Double[] dockCamDistFromCenter = {-0.054, -0.0064, 0.1061};
 
-    private static final double distanceToArea = 0.8725;
+    private static final double distanceToArea = 0.8;
     static final double targetZ_area23 = 3.76093 + distanceToArea;
     static final double targetY_area1 = -10.58 + distanceToArea;
     static final double targetX_area4 = 9.866984 + distanceToArea;

@@ -17,6 +17,7 @@ import org.opencv.core.Point;
 import org.opencv.features2d.BFMatcher;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.ORB;
+import org.opencv.features2d.SIFT;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.IOException;
@@ -39,11 +40,12 @@ public class Estimate {
     }
 
     public Point computeProjectedPoint(Mat input, Point inputPoint, Integer areaNum) {
-        ORB orb = ORB.create(1000);
+        // 改為使用 SIFT 特徵
+        SIFT sift = SIFT.create();
 
         MatOfKeyPoint inputKeypoints = new MatOfKeyPoint();
         Mat inputDescriptors = new Mat();
-        orb.detectAndCompute(input, new Mat(), inputKeypoints, inputDescriptors);
+        sift.detectAndCompute(input, new Mat(), inputKeypoints, inputDescriptors);
 
         if (inputDescriptors.empty()) {
             return null; // 無法計算特徵
@@ -56,18 +58,26 @@ public class Estimate {
             return null;
         }
 
-        BFMatcher matcher = BFMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMING, true);
-        MatOfDMatch matches = new MatOfDMatch();
-        matcher.match(bg.descriptors, inputDescriptors, matches);
+        // 使用 FLANN 匹配器搭配 Ratio Test
+        DescriptorMatcher matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
+        List<MatOfDMatch> knnMatches = new ArrayList<>();
+        matcher.knnMatch(bg.descriptors, inputDescriptors, knnMatches, 2);
 
-        List<DMatch> matchList = matches.toList();
-        if (matchList.size() < 10) return null;
+        List<DMatch> goodMatches = new ArrayList<>();
+        for (MatOfDMatch matOfDMatch : knnMatches) {
+            DMatch[] matches = matOfDMatch.toArray();
+            if (matches.length >= 2 && matches[0].distance < 0.75 * matches[1].distance) {
+                goodMatches.add(matches[0]);
+            }
+        }
+
+        if (goodMatches.size() < 10) return null;
 
         KeyPoint[] inputKeypointArray = inputKeypoints.toArray();
 
         List<Point> ptsBg = new ArrayList<>();
         List<Point> ptsInput = new ArrayList<>();
-        for (DMatch m : matchList) {
+        for (DMatch m : goodMatches) {
             if (m.queryIdx < bg.keypoints.size() && m.trainIdx < inputKeypointArray.length) {
                 ptsBg.add(bg.keypoints.get(m.queryIdx).pt);
                 ptsInput.add(inputKeypointArray[m.trainIdx].pt);
@@ -94,18 +104,14 @@ public class Estimate {
         double ratioX;
         double ratioY;
 
-        switch(areaNum){
+        switch (areaNum) {
             case 1:
                 ratioX = projected.x / (bg.img.width() + 250);
                 ratioY = projected.y / bg.img.height();
                 break;
             case 2:
                 ratioX = projected.x / bg.img.width();
-                ratioY = projected.y / (bg.img.height() - 280);
-                break;
-            case 3:
-                ratioX = projected.x / bg.img.width();
-                ratioY = (projected.y - 280) / (bg.img.height() - 280);
+                ratioY = projected.y / bg.img.height();
                 break;
             default:
                 ratioX = projected.x / bg.img.height();
@@ -129,20 +135,22 @@ public class Estimate {
         return mat;
     }
 
-    private void initbackgroundFeaturesMap(){
+    private void initbackgroundFeaturesMap() {
+        SIFT sift = SIFT.create(); // 只建立一次
+
         for (int i = 1; i <= 4; i++) {
-            Mat bgImage = loadMatFromAssets("Area" + i + ".png"); // 確認檔名副檔名
+            Mat bgImage = loadMatFromAssets("Area" + i + ".png"); // 確認副檔名
             if (bgImage.empty()) continue;
 
-            ORB orb = ORB.create(1000);
             Mat gray = new Mat();
             Imgproc.cvtColor(bgImage, gray, Imgproc.COLOR_BGR2GRAY);
 
             MatOfKeyPoint keypoints = new MatOfKeyPoint();
             Mat descriptors = new Mat();
-            orb.detectAndCompute(gray, new Mat(), keypoints, descriptors);
+            sift.detectAndCompute(gray, new Mat(), keypoints, descriptors);
 
             List<KeyPoint> keypointList = keypoints.toList();
+            if (keypointList.isEmpty() || descriptors.empty()) continue;
 
             BackgroundFeature bg = new BackgroundFeature(bgImage, keypointList, descriptors);
             backgroundFeaturesMap.put(i, bg);
