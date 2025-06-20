@@ -15,10 +15,12 @@ import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point3;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import gov.nasa.arc.astrobee.Kinematics;
@@ -45,6 +47,14 @@ public class YourService extends KiboRpcService {
     private HashMap<Integer, Point> pointAIMMap = new HashMap<>();
 
     private int saveImgNum = 0;
+
+    private final PriorityBlockingQueue<ScanTask> scanTaskQueue
+            = new PriorityBlockingQueue<ScanTask>(11, new Comparator<ScanTask>() {
+        @Override
+        public int compare(ScanTask o1, ScanTask o2) {
+            return Integer.compare(o1.getPriority(), o2.getPriority());
+        }
+    });
 
     @Override
     protected void runPlan1(){
@@ -95,6 +105,8 @@ public class YourService extends KiboRpcService {
         private ExecutorService executorService = Executors.newSingleThreadExecutor();
         private volatile boolean running = true;
 
+        public boolean isRunning() {return running;}
+
         public void stopRunning(){
             running = false;
         }
@@ -137,6 +149,13 @@ public class YourService extends KiboRpcService {
                     });
                 }
 
+                while (!scanTaskQueue.isEmpty()){
+                    ScanTask task = scanTaskQueue.poll();
+                    if (task != null){
+                        task.process();
+                    }
+                }
+
                 try {
                     long processingTime = System.currentTimeMillis() - pastTime;
                     Thread.sleep(100);
@@ -155,6 +174,32 @@ public class YourService extends KiboRpcService {
                 executorService.shutdownNow();
             }
         }
+    }
+
+    private class ScanTask{
+        private final Mat image;
+        private final int areaId;
+        private final int priority;
+
+        ScanTask(Mat image, int areaId) {
+            this.image = image;
+            this.areaId = areaId;
+            this.priority = itemDetectorUtils.getScanCountForArea(areaId);
+        }
+
+        int getPriority() {
+            return priority;
+        }
+
+        void process() {
+            try {
+                itemDetectorUtils.scanItemBoard(image, areaId);
+            } finally {
+                image.release();
+            }
+        }
+
+
     }
 
     private void initCamParameter() {
@@ -199,7 +244,10 @@ public class YourService extends KiboRpcService {
                     api.saveMatImage(lostItemBoardImg,"image_" + saveImgNum + ".png");
                     saveImgNum++;
 
-                    itemDetectorUtils.scanItemBoard(lostItemBoardImg, id);
+//                    itemDetectorUtils.scanItemBoard(lostItemBoardImg, id);
+
+                    if (vision.isRunning()) scanTaskQueue.put(new ScanTask(lostItemBoardImg.clone(), id));
+                    else lostItemBoardImg.release();
 
                 }else{Log.i("lostItemBoardImg","lostItemBoardImg is null");}
             }
