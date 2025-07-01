@@ -60,7 +60,7 @@ To be experimented.
 
 [3] Huang, S., Lu, Z., Cun, X., Yu, Y., Zhou, X., and Shen, X. “DEIM: DETR with Improved Matching for Fast Convergence,” _2025 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)_ (not yet published), 2025, pp. 15162-15171. 
 
-[4] Lowe, D. G. “Distinctive Image Features from Scale-Invariant Keypoints.” _International Journal of Computer Vision_, Vol. 60, No. 2, 2004, pp. 91–110. https://doi.org/10.1023/b:visi.0000029664.99615.94.
+[4] Lowe, D. G. “Distinctive Image Features from Scale-Invariant Keypoints,” _International Journal of Computer Vision_, Vol. 60, No. 2, 2004, pp. 91–110. https://doi.org/10.1023/b:visi.0000029664.99615.94.
 
 [5] Lowe, D. G. “Object Recognition from Local Scale-Invariant Features,” _Proceedings of the Seventh IEEE International Conference on Computer Vision_, Institute of Electrical and Electronics Engineers, Kerkyra, Vol. 2, Sep. 1999, pp. 1150-1157.
 
