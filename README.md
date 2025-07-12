@@ -1,7 +1,7 @@
 # Europa @ 6th Kibo RPC -- Taiwanese Team
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/334cba52-8169-4a40-b3b1-a81151c3edae" />
+  <img width="4167" height="1250" alt="Logo_With_Kibo-01" src="https://github.com/user-attachments/assets/a2fad2de-89e9-48a3-967e-34bbfd996d8f" />
 </p>
 
 We are team **Europa** came from Taiwan, one of participating team of **the 6th Kibo Robot Programming Challenge**.
