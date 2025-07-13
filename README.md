@@ -10,10 +10,6 @@ Taiwan Prelimary Round team #: **K15**
 
 ## Technology
 
-### Routine Strategy
-
-To be finished.
-
 ### Object Detection for Board Scanning
 
 #### The "Sub-Thread" Strategy
